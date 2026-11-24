@@ -1,0 +1,55 @@
+{% load static %}<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Khu vực vận hành{% endblock %} · {{ brand_name }}</title>
+    <link rel="stylesheet" href="{% static 'core/css/operations.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/counter.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="operations-page desk-page {% block body_class %}{% endblock %}" data-brand="{{ brand_code }}">
+    <aside class="desk-sidebar" id="desk-sidebar" aria-label="Điều hướng khu vận hành">
+        <a class="desk-brand" href="{% url 'home' %}">
+            <img src="{% static 'core/img/EyeViora/logoEyeViora.png' %}" alt="EyeViora" width="40" height="40">
+            <span><strong>EyeViora</strong><small>KHU VẬN HÀNH</small></span>
+        </a>
+        <p class="desk-nav-label">Công việc</p>
+        <nav class="desk-nav">
+            {% if user.le_tan_chi_nhanh %}
+                <a href="{% url 'reception_dashboard' %}"{% if request.resolver_match.url_name == 'reception_dashboard' %} aria-current="page"{% endif %}><span aria-hidden="true">▦</span>Lịch tiếp nhận</a>
+                <a href="{% url 'reception_book' %}"{% if request.resolver_match.url_name == 'reception_book' %} aria-current="page"{% endif %}><span aria-hidden="true">＋</span>Đặt lịch hộ</a>
+                <a href="{% url 'affected_appointments' %}"{% if request.resolver_match.url_name == 'affected_appointments' %} aria-current="page"{% endif %}><span aria-hidden="true">!</span>Lịch bị ảnh hưởng</a>
+            {% endif %}
+            {% if nav_can_collect %}
+                <a href="{% url 'payment_list' %}"{% if request.resolver_match.url_name == 'payment_list' %} aria-current="page"{% endif %}><span aria-hidden="true">◷</span>Thu tiền sau khám</a>
+            {% endif %}
+            {% if nav_can_admin %}
+                <a href="{% url 'custom_admin_dashboard' %}"><span aria-hidden="true">▤</span>Quản trị</a>
+                <a href="{% url 'cashier_monitor' %}"{% if request.resolver_match.url_name == 'cashier_monitor' or request.resolver_match.url_name == 'cashier_monitor_detail' %} aria-current="page"{% endif %}><span aria-hidden="true">◎</span>Giám sát hóa đơn</a>
+            {% endif %}
+        </nav>
+        <div class="desk-sidebar-bottom">
+            <a class="desk-home" href="{% url 'home' %}">← Về trang EyeViora</a>
+            {% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="desk-logout" type="submit">Đăng xuất</button></form>{% endif %}
+        </div>
+    </aside>
+    <div class="desk-scrim" data-desk-scrim aria-hidden="true"></div>
+    <header class="desk-topbar">
+        <button type="button" class="desk-menu-toggle" data-desk-menu aria-label="Mở menu" aria-expanded="false" aria-controls="desk-sidebar"><span></span></button>
+        <div><p class="desk-eyebrow">EyeViora · Vận hành</p><strong>{% block area %}Khu vận hành{% endblock %}</strong></div>
+        {% if user.is_authenticated %}<div class="desk-user">
+            <span class="desk-user-name" title="{{ user.get_full_name|default:user.username }}">{{ user.get_full_name|default:user.username }}</span>
+            {% if user.le_tan_chi_nhanh %}<span class="desk-user-branch" title="Chi nhánh: {{ user.le_tan_chi_nhanh.chi_nhanh.ten }}">{{ user.le_tan_chi_nhanh.chi_nhanh.ten }}</span>
+            {% endif %}
+        </div>{% endif %}
+    </header>
+    <main class="desk-main">
+        {% block section_nav %}{% endblock %}
+        {% for message in messages %}<p role="status" class="notice {{ message.tags }}">{{ message }}</p>{% endfor %}
+        {% block content %}{% endblock %}
+    </main>
+    <script src="{% static 'core/js/counter.js' %}" defer></script>
+    <script src="{% static 'core/js/validation_vi.js' %}" defer></script>
+</body>
+</html>

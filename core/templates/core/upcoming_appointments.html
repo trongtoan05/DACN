@@ -1,0 +1,57 @@
+{% extends 'core/patient/base.html' %}
+{% block title %}Lịch hẹn của tôi{% endblock %}
+{% block page_title %}Lịch hẹn của tôi{% endblock %}
+{% block page_subtitle %}<p>Kiểm tra thời gian, chi nhánh, bác sĩ và dịch vụ cho các lần khám của bạn.</p>{% endblock %}
+{% block patient_content %}
+    <section aria-labelledby="upcoming-title">
+        <div class="patient-section-heading"><h2 id="upcoming-title">Lịch sắp tới</h2><span class="patient-help">{{ lich_khams|length }} lịch</span></div>
+        {% if lich_khams %}
+            <div class="patient-grid">
+                {% for lich in lich_khams %}
+                    <article class="patient-card">
+                        <div class="patient-appointment-top">
+                            <div><div class="patient-date">{{ lich.ngay_kham|date:'l, d/m/Y' }} · {{ lich.gio_kham|time:'H:i' }}</div><h2>{{ lich.bac_si.ho_ten }}</h2></div>
+                            <span class="patient-badge" data-status="{{ lich.trang_thai }}">{{ lich.get_trang_thai_display }}</span>
+                        </div>
+                        <dl class="patient-details">
+                            <div><dt>Chi nhánh</dt><dd>{{ lich.bac_si.chi_nhanh.ten }}</dd></div>
+                            <div><dt>Bác sĩ</dt><dd>{{ lich.bac_si.ho_ten }}</dd></div>
+                            <div class="patient-detail-services"><dt>Dịch vụ đã đặt</dt><dd>
+                                <span class="patient-service-tags">
+                                    {% for service in lich.dich_vu_dat_truoc_nhieu.all %}<span class="patient-service-tag">{{ service.ten }}</span>
+                                    {% empty %}{% if lich.dich_vu_dat_truoc %}<span class="patient-service-tag">{{ lich.dich_vu_dat_truoc.ten }}</span>{% else %}<span class="patient-help">Lịch cũ chưa ghi nhận dịch vụ đặt trước.</span>{% endif %}{% endfor %}
+                                </span>
+                            </dd></div>
+                        </dl>
+                        {% if lich.trang_thai == 'cho' %}
+                            <div class="patient-actions">
+                                <form method="post" action="{% url 'cancel_appointment' lich.id %}">
+                                    {% csrf_token %}<button class="patient-button danger" type="submit" onclick="return confirm('Bạn có chắc chắn muốn hủy lịch khám này?')">Hủy lịch</button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="patient-empty"><strong>Bạn chưa có lịch khám sắp tới</strong><p>Chọn chi nhánh và thời gian phù hợp để đặt lịch khám mắt.</p><a class="patient-button" href="{% url 'dat_lich_picker' %}">Đặt lịch khám</a></div>
+        {% endif %}
+    </section>
+    {% if lich_huy %}
+        <section aria-labelledby="cancelled-title">
+            <div class="patient-section-heading"><h2 id="cancelled-title">Lịch đã hủy</h2></div>
+            <div class="patient-grid">
+                {% for lich in lich_huy %}
+                    <article class="patient-card">
+                        <div class="patient-appointment-top"><div><div class="patient-date">{{ lich.ngay_kham|date:'l, d/m/Y' }} · {{ lich.gio_kham|time:'H:i' }}</div><h2>{{ lich.bac_si.ho_ten }}</h2></div><span class="patient-badge" data-status="huy">{{ lich.get_trang_thai_display }}</span></div>
+                        <dl class="patient-details">
+                            <div><dt>Chi nhánh</dt><dd>{{ lich.bac_si.chi_nhanh.ten }}</dd></div>
+                            <div><dt>Bác sĩ</dt><dd>{{ lich.bac_si.ho_ten }}</dd></div>
+                            <div><dt>Dịch vụ đã đặt</dt><dd><span class="patient-service-tags">{% for service in lich.dich_vu_dat_truoc_nhieu.all %}<span class="patient-service-tag">{{ service.ten }}</span>{% empty %}{% if lich.dich_vu_dat_truoc %}<span class="patient-service-tag">{{ lich.dich_vu_dat_truoc.ten }}</span>{% else %}<span class="patient-help">Không có thông tin dịch vụ đặt trước.</span>{% endif %}{% endfor %}</span></dd></div>
+                        </dl>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+{% endblock %}

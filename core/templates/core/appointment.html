@@ -1,0 +1,754 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt lịch khám</title>
+    <style>
+        :root {
+            --bg-1: #f5f7f4;
+            --bg-2: #edf3ef;
+            --ink: #1f2c2a;
+            --muted: #586664;
+            --primary: #0e6f60;
+            --primary-2: #13806f;
+            --card: #ffffff;
+            --ring: rgba(14, 111, 96, 0.2);
+            --border: rgba(18, 46, 42, 0.12);
+            --shadow-soft: 0 10px 26px rgba(16, 35, 31, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+        select option:disabled, .slot-unavailable { color: #8795a0; background: #f1f4f6; }
+
+        body {
+            margin: 0;
+            font-family: var(--ev-font, "Segoe UI", Arial, sans-serif);
+            color: var(--ink);
+            background:
+                radial-gradient(1200px 600px at 95% -10%, rgba(19, 128, 111, 0.13), transparent 58%),
+                radial-gradient(900px 500px at -10% 15%, rgba(110, 157, 143, 0.13), transparent 58%),
+                linear-gradient(120deg, var(--bg-1), var(--bg-2));
+            min-height: 100vh;
+        }
+
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 20px 44px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 20px;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(10px);
+            animation: riseIn 0.36s ease-out both;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-family: inherit;
+            font-size: 30px;
+            line-height: 1.15;
+        }
+
+        .brand span {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            border: 1px solid transparent;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .btn.primary {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 10px 18px rgba(14, 111, 96, 0.24);
+        }
+
+        .btn.primary:hover {
+            background: var(--primary-2);
+            transform: translateY(-1px);
+        }
+
+        .btn.ghost {
+            color: var(--primary);
+            border-color: rgba(14, 111, 96, 0.35);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .btn.ghost:hover {
+            box-shadow: 0 10px 16px rgba(14, 111, 96, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .layout {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: minmax(320px, 1fr) minmax(0, 1.6fr);
+            margin-top: 14px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow-soft);
+            padding: 16px;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            animation: riseIn 0.42s ease-out both;
+            animation-delay: var(--enter-delay, 0s);
+        }
+        .stack .card:nth-child(1) { --enter-delay: 0.07s; }
+        .stack .card:nth-child(2) { --enter-delay: 0.12s; }
+        .card:hover { transform: translateY(-2px); }
+
+        .section-title {
+            margin: 0 0 12px;
+            font-size: 22px;
+            font-family: inherit;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .meta-row {
+            background: rgba(14, 111, 96, 0.06);
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        .meta-row strong {
+            color: #26423d;
+        }
+
+        .service-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0 4px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(14, 111, 96, 0.1);
+            color: var(--primary);
+        }
+
+        .badge.warn {
+            background: rgba(176, 72, 72, 0.13);
+            color: #9d2c2c;
+        }
+
+        .stack {
+            display: grid;
+            gap: 12px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #26423d;
+        }
+
+        .field #id_dich_vu_dat_truoc_nhieu,
+        .field ul:has(input[name="dich_vu_dat_truoc_nhieu"]) {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .service-option,
+        .field ul:has(input[name="dich_vu_dat_truoc_nhieu"]) label {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 7px 0;
+            font-weight: 500;
+        }
+
+        .service-option input[type="checkbox"],
+        .field ul:has(input[name="dich_vu_dat_truoc_nhieu"]) input[type="checkbox"] {
+            width: auto;
+            margin-top: 3px;
+            padding: 0;
+        }
+
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+        .form-control,
+        select,
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(31, 42, 43, 0.2);
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+            background: #fff;
+        }
+
+        .form-control:focus,
+        select:focus,
+        input:focus,
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--ring);
+        }
+
+        .hint {
+            margin: 0;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .alert {
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            border: 1px solid rgba(180, 52, 52, 0.35);
+            background: rgba(248, 225, 225, 0.7);
+            color: #7f2f2f;
+        }
+
+        .alert ul {
+            margin: 8px 0 0 18px;
+            padding: 0;
+        }
+
+        .empty {
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px dashed rgba(31, 42, 43, 0.2);
+            padding: 14px;
+            border-radius: 12px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+
+        .schedule-grid {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        }
+
+        .schedule-item {
+            border: 1px solid rgba(31, 42, 43, 0.08);
+            border-radius: 12px;
+            padding: 12px;
+            background: rgba(14, 111, 96, 0.04);
+        }
+
+        .schedule-item h4 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        .schedule-row {
+            font-size: 13px;
+            color: var(--muted);
+            margin: 4px 0;
+        }
+
+        @keyframes riseIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .page {
+                padding: 14px 10px 28px;
+            }
+
+            .topbar {
+                padding: 14px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .brand h1 {
+                font-size: 26px;
+            }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <link rel="stylesheet" href="{% static 'core/css/public.css' %}">
+</head>
+<body class="public-page">
+    <div class="page">
+        {% include 'core/public_header.html' %}
+
+        <section class="layout">
+            <aside class="stack">
+                <div class="card">
+                    <h2 class="section-title">Chi nhánh</h2>
+                    {% if selected_branch %}
+                        <div class="meta-grid">
+                            <div class="meta-row"><strong>Địa chỉ:</strong> {{ selected_branch.dia_chi }}</div>
+                            {% if selected_branch.so_dien_thoai %}<div class="meta-row"><strong>Điện thoại:</strong> {{ selected_branch.so_dien_thoai }}</div>{% endif %}
+                            {% if selected_branch.email %}<div class="meta-row"><strong>Email:</strong> {{ selected_branch.email }}</div>{% endif %}
+                            <div class="meta-row"><strong>Giờ hoạt động:</strong> {{ selected_branch.gio_mo|time:"H\hi" }} - {{ selected_branch.gio_dong|time:"H\hi" }}</div>
+                        </div>
+                    {% else %}
+                        <div class="empty">Chọn chi nhánh đang hoạt động để xem dịch vụ và lịch khám.</div>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <h2 class="section-title">Bệnh nhân</h2>
+                    <div class="meta-grid">
+                        <div class="meta-row"><strong>Họ tên:</strong> {{ benh_nhan.ho_ten }}</div>
+                        <div class="meta-row"><strong>Số điện thoại:</strong> {{ benh_nhan.so_dien_thoai }}</div>
+                        <div class="meta-row"><strong>Ngày sinh:</strong> {{ benh_nhan.ngay_sinh|date:"d/m/Y" }}</div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="stack">
+                <div class="card">
+                    <h2 class="section-title">Đặt lịch</h2>
+
+                    {% if messages %}
+                        <div class="stack" style="margin-bottom:12px;">
+                            {% for message in messages %}
+                                <div class="alert">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if form.errors %}
+                        <div class="alert" style="margin-bottom:12px;">
+                            Vui lòng kiểm tra lại thông tin:
+                            <ul>
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" id="appointment-form">
+                        {% csrf_token %}
+                        <div class="field">
+                            <label for="{{ form.chi_nhanh.id_for_label }}">Chi nhánh</label>
+                            {{ form.chi_nhanh }}{{ form.chi_nhanh.errors }}
+                        </div>
+                        <div class="field">
+                            <label>Dịch vụ khám mắt (có thể chọn nhiều)</label>
+                            {{ form.dich_vu_dat_truoc_nhieu }}{{ form.dich_vu_dat_truoc_nhieu.errors }}
+                        </div>
+                        <div class="field">
+                            <label for="{{ form.bac_si.id_for_label }}">Bác sĩ</label>
+                            {{ form.bac_si }}{{ form.bac_si.errors }}
+                        </div>
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="{{ form.ngay_kham.id_for_label }}">Ngày khám</label>
+                                {{ form.ngay_kham }}{{ form.ngay_kham.errors }}
+                                <p class="hint">Chọn trước giờ khám ít nhất 60 phút.</p>
+                            </div>
+                            <div class="field">
+                                <label for="{{ form.gio_kham.id_for_label }}">Khung giờ còn trống</label>
+                                {{ form.gio_kham }}{{ form.gio_kham.errors }}
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="{{ form.ghi_chu.id_for_label }}">Ghi chú</label>
+                            {{ form.ghi_chu }}{{ form.ghi_chu.errors }}
+                        </div>
+                        <div class="meta-row" id="booking-summary" aria-live="polite">
+                            <strong>Kiểm tra thông tin:</strong>
+                            <div>Chi nhánh: <span id="summary-branch">—</span></div>
+                            <div>Dịch vụ: <span id="summary-service">—</span></div>
+                            <div>Thời lượng dự kiến: <span id="summary-duration">—</span></div>
+                            <div>Mô tả: <span id="summary-description">—</span></div>
+                            <div>Bác sĩ: <span id="summary-doctor">—</span></div>
+                            <div>Ngày, giờ: <span id="summary-datetime">—</span></div>
+                            <div>Giá tham khảo: <span id="summary-price">—</span></div>
+                            <div>Bệnh nhân: {{ benh_nhan.ho_ten }} · {{ benh_nhan.so_dien_thoai }}</div>
+                        </div>
+                        <p id="booking-status" class="hint" role="status" aria-live="polite"></p>
+                        <div class="actions">
+                            <button class="btn primary" id="submit-booking" type="submit" {% if not slots %}disabled{% endif %}>Xác nhận đặt lịch</button>
+                            <a class="btn ghost" href="{% url 'upcoming_appointments' %}">Xem lịch đã đặt</a>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h2 class="section-title">Lịch làm việc bác sĩ</h2>
+                    {% if bac_si_schedules %}
+                        <div class="schedule-grid" id="doctor-schedule-list" aria-live="polite">
+                            {% for item in bac_si_schedules %}
+                                <div class="schedule-item">
+                                    <h4>{{ item.bac_si.ho_ten }}</h4>
+                                    {% if item.gio_lam_viecs %}
+                                        {% for glv in item.gio_lam_viecs %}
+                                            <div class="schedule-row">
+                                                {{ glv.get_thu_display }}:
+                                                {% if glv.nghi %}
+                                                    Nghỉ
+                                                {% else %}
+                                                    {{ glv.gio_bat_dau|time:"H\hi" }} - {{ glv.gio_ket_thuc|time:"H\hi" }}
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="schedule-row">Chưa có lịch làm việc.</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty" id="doctor-schedule-list" aria-live="polite">Chọn chi nhánh và dịch vụ để xem bác sĩ được phân công.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </div>
+    {% include 'core/public_footer.html' %}
+    <script>
+        (function () {
+            const branch = document.getElementById("id_chi_nhanh");
+            const service = document.getElementById("id_dich_vu_dat_truoc_nhieu");
+            const doctor = document.getElementById("id_bac_si");
+            const date = document.getElementById("id_ngay_kham");
+            const time = document.getElementById("id_gio_kham");
+            const status = document.getElementById("booking-status");
+            const submit = document.getElementById("submit-booking");
+            const api = "{% url 'appointment_options_api' %}";
+            if (!branch || !service || !doctor || !date || !time) return;
+
+            const today = "{{ today|date:'Y-m-d' }}";
+            date.min = today;
+            let serviceRows = [];
+            let doctorRows = [];
+            let requestController = null;
+            const scheduleList = document.getElementById("doctor-schedule-list");
+
+            function renderDoctorSchedules(rows) {
+                if (!scheduleList) return;
+                scheduleList.replaceChildren();
+                if (!rows.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "empty";
+                    empty.textContent = "Chưa có bác sĩ được phân công cho dịch vụ đã chọn.";
+                    scheduleList.append(empty);
+                    return;
+                }
+                rows.forEach((doctorRow) => {
+                    const card = document.createElement("div");
+                    card.className = "schedule-item";
+                    const heading = document.createElement("h4");
+                    heading.textContent = doctorRow.name;
+                    card.append(heading);
+                    if (!doctorRow.schedules || !doctorRow.schedules.length) {
+                        const line = document.createElement("div");
+                        line.className = "schedule-row";
+                        line.textContent = "Chưa có lịch làm việc.";
+                        card.append(line);
+                    } else {
+                        doctorRow.schedules.forEach((schedule) => {
+                            const line = document.createElement("div");
+                            line.className = "schedule-row";
+                            line.textContent = `${schedule.weekday}: ${schedule.off ? "Nghỉ" : `${schedule.start} - ${schedule.end}`}`;
+                            card.append(line);
+                        });
+                    }
+                    scheduleList.append(card);
+                });
+            }
+
+            function selectedServiceIds() {
+                return Array.from(service.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+            }
+
+            function setServiceOptions(rows, placeholder, labelFor) {
+                const select = service;
+                select.replaceChildren();
+                if (!rows.length) {
+                    const note = document.createElement('span');
+                    note.textContent = placeholder;
+                    select.append(note);
+                }
+                rows.forEach((row, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'service-option';
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.name = 'dich_vu_dat_truoc_nhieu';
+                    input.value = String(row.id);
+                    input.id = `id_dich_vu_dat_truoc_nhieu_${index}`;
+                    label.append(input, document.createTextNode(` ${labelFor(row)}`));
+                    select.append(label);
+                });
+            }
+
+            function setSelectOptions(select, rows, placeholder, labelFor) {
+                select.replaceChildren(new Option(placeholder, ""));
+                rows.forEach((row) => select.add(new Option(labelFor(row), String(row.id))));
+                select.disabled = rows.length === 0;
+            }
+
+            function setSlots(rows) {
+                time.replaceChildren(new Option("-- Chọn khung giờ --", ""));
+                rows.forEach((row) => {
+                    const slot = typeof row === "string" ? row : row.time;
+                    const available = typeof row === "string" || row.available;
+                    const option = new Option(available ? slot : `${slot} — Không còn trống`, slot);
+                    option.disabled = !available;
+                    if (!available) option.className = "slot-unavailable";
+                    time.add(option);
+                });
+                time.disabled = rows.length === 0;
+                updateSummary();
+            }
+
+            function resetAfterBranch() {
+                serviceRows = [];
+                doctorRows = [];
+                setServiceOptions([], "Chọn chi nhánh để xem dịch vụ.", () => "");
+                setSelectOptions(doctor, [], "-- Chọn bác sĩ --", () => "");
+                date.value = "";
+                date.disabled = true;
+                setSlots([]);
+                renderDoctorSchedules([]);
+            }
+
+            function resetAfterService() {
+                doctorRows = [];
+                setSelectOptions(doctor, [], "-- Chọn bác sĩ --", () => "");
+                date.value = "";
+                date.disabled = true;
+                setSlots([]);
+                renderDoctorSchedules([]);
+            }
+
+            async function loadOptions(parameters) {
+                if (requestController) requestController.abort();
+                requestController = new AbortController();
+                status.textContent = "Đang cập nhật dịch vụ, bác sĩ và khung giờ…";
+                const url = new URL(api, window.location.origin);
+                Object.entries(parameters).forEach(([key, value]) => {
+                    if (Array.isArray(value)) value.forEach((item) => url.searchParams.append(key, item));
+                    else if (value) url.searchParams.set(key, value);
+                });
+                const response = await fetch(url, {
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                    signal: requestController.signal,
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.message || "Không tải được lựa chọn.");
+                return payload;
+            }
+
+            function money(value) {
+                const number = Number(value);
+                return Number.isFinite(number) ? new Intl.NumberFormat("vi-VN").format(number) + " VND" : "—";
+            }
+
+            function updateSummary() {
+                const serviceSelection = serviceRows.filter((row) => selectedServiceIds().includes(String(row.id)));
+                const doctorRow = doctorRows.find((row) => String(row.id) === doctor.value);
+                document.getElementById("summary-branch").textContent = branch.selectedOptions[0]?.textContent || "—";
+                document.getElementById("summary-service").textContent = serviceSelection.map((row) => row.name).join(", ") || "—";
+                const duration = serviceSelection.reduce((sum, row) => sum + Number(row.duration_minutes || 30), 0);
+                document.getElementById("summary-duration").textContent = serviceSelection.length ? `${duration} phút` : "—";
+                document.getElementById("summary-description").textContent = serviceSelection.map((row) => row.description).filter(Boolean).join(" · ") || "—";
+                document.getElementById("summary-doctor").textContent = doctorRow ? `${doctorRow.name} — ${doctorRow.specialty}` : "—";
+                document.getElementById("summary-datetime").textContent = date.value && time.value ? `${date.value.split("-").reverse().join("/")} · ${time.value}` : "—";
+                document.getElementById("summary-price").textContent = serviceSelection.length ? money(serviceSelection.reduce((sum, row) => sum + Number(row.price || 0), 0)) : "—";
+                submit.disabled = !(branch.value && selectedServiceIds().length && doctor.value && date.value && time.value);
+            }
+
+            async function refreshServices(preferredService = "") {
+                resetAfterBranch();
+                if (!branch.value) {
+                    status.textContent = "Chọn chi nhánh đang hoạt động.";
+                    updateSummary();
+                    return;
+                }
+                const requestedBranch = branch.value;
+                try {
+                    const payload = await loadOptions({ chi_nhanh: branch.value });
+                    if (branch.value !== requestedBranch) return;
+                    serviceRows = payload.services || [];
+                    setServiceOptions(serviceRows, "-- Chọn dịch vụ khám mắt --", (row) => `${row.name} · ${money(row.price)}`);
+                    const preferredIds = String(preferredService).split(',').filter(Boolean);
+                    if (preferredIds.length && preferredIds.every((id) => serviceRows.some((row) => String(row.id) === id))) {
+                        preferredIds.forEach((id) => {
+                            const input = service.querySelector(`input[value="${id}"]`);
+                            if (input) input.checked = true;
+                        });
+                        await refreshDoctors("", "", "");
+                    } else {
+                        status.textContent = payload.message || "Chọn dịch vụ khám mắt.";
+                    }
+                } catch (error) {
+                    if (error.name !== "AbortError") status.textContent = error.message;
+                }
+                updateSummary();
+            }
+
+            async function refreshDoctors(preferredDoctor = "", preferredDate = "", preferredTime = "") {
+                resetAfterService();
+                if (!branch.value || !selectedServiceIds().length) {
+                    status.textContent = "Chọn chi nhánh và dịch vụ để xem bác sĩ.";
+                    updateSummary();
+                    return;
+                }
+                const requestedBranch = branch.value;
+                const requestedServices = selectedServiceIds();
+                try {
+                    const payload = await loadOptions({ chi_nhanh: branch.value, dich_vu_dat_truoc_nhieu: requestedServices });
+                    if (branch.value !== requestedBranch || JSON.stringify(selectedServiceIds()) !== JSON.stringify(requestedServices)) return;
+                    doctorRows = payload.doctors || [];
+                    renderDoctorSchedules(doctorRows);
+                    setSelectOptions(doctor, doctorRows, "-- Chọn bác sĩ --", (row) => `${row.name} · ${row.specialty}`);
+                    if (preferredDoctor && doctorRows.some((row) => String(row.id) === String(preferredDoctor))) {
+                        doctor.value = String(preferredDoctor);
+                        date.disabled = false;
+                        if (preferredDate) {
+                            date.value = preferredDate;
+                            await refreshSlots(preferredTime);
+                        }
+                    } else {
+                        status.textContent = payload.message || "Chọn bác sĩ.";
+                    }
+                } catch (error) {
+                    if (error.name !== "AbortError") status.textContent = error.message;
+                }
+                updateSummary();
+            }
+
+            async function refreshSlots(preferredTime = "") {
+                setSlots([]);
+                if (!branch.value || !selectedServiceIds().length || !doctor.value || !date.value) {
+                    status.textContent = "Chọn bác sĩ và ngày khám để xem giờ còn trống.";
+                    updateSummary();
+                    return;
+                }
+                const requestedBranch = branch.value;
+                const requestedServices = selectedServiceIds();
+                const requestedDoctor = doctor.value;
+                const requestedDate = date.value;
+                try {
+                    const payload = await loadOptions({
+                        chi_nhanh: branch.value,
+                        dich_vu_dat_truoc_nhieu: requestedServices,
+                        bac_si: doctor.value,
+                        ngay_kham: date.value,
+                    });
+                    if (branch.value !== requestedBranch || JSON.stringify(selectedServiceIds()) !== JSON.stringify(requestedServices) ||
+                        doctor.value !== requestedDoctor || date.value !== requestedDate) return;
+                    setSlots(payload.slot_options || payload.slots || []);
+                    if (preferredTime && payload.slots.includes(preferredTime)) time.value = preferredTime;
+                    status.textContent = payload.message || "";
+                } catch (error) {
+                    if (error.name !== "AbortError") status.textContent = error.message;
+                }
+                updateSummary();
+            }
+
+            let pendingServiceIds = "{{ initial_service_ids|join:',' }}".split(",").filter(Boolean);
+            branch.addEventListener("change", () => {
+                const preferredIds = branch.value ? pendingServiceIds.join(",") : "";
+                pendingServiceIds = [];
+                refreshServices(preferredIds);
+            });
+            service.addEventListener("change", () => refreshDoctors());
+            doctor.addEventListener("change", () => {
+                date.value = "";
+                date.disabled = !doctor.value;
+                refreshSlots();
+            });
+            date.addEventListener("change", () => refreshSlots());
+            time.addEventListener("change", updateSummary);
+
+            if (branch.value) {
+                refreshServices("{{ initial_service_ids|join:',' }}").then(() => {
+                    if (selectedServiceIds().length) refreshDoctors("{{ initial_doctor_id }}", "{{ initial_date }}", "{{ form.gio_kham.value|default:'' }}");
+                });
+                pendingServiceIds = [];
+            } else {
+                resetAfterBranch();
+                status.textContent = "Chọn chi nhánh đang hoạt động.";
+            }
+            updateSummary();
+        })();
+    </script>
+    <script src="{% static 'core/js/public.js' %}" defer></script>
+</body>
+</html>
+
+
+

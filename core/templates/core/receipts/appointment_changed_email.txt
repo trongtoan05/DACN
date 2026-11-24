@@ -1,0 +1,8 @@
+EyeViora - Thông báo lịch khám
+
+Xin chào {{ patient }},
+{% if cancelled %}Lịch hẹn #{{ booking_id }} tại {{ branch }} đã được hủy. Vui lòng liên hệ chi nhánh nếu cần hỗ trợ đặt lịch mới.
+{% else %}Lịch hẹn #{{ booking_id }} đã chuyển sang {{ appointment_at }}.
+Bác sĩ: {{ doctor }}
+Chi nhánh: {{ branch }}
+{% endif %}

@@ -1,0 +1,25 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#103452">
+    <title>{% block title %}EyeViora{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'core/css/public.css' %}">
+</head>
+<body class="public-page ev-status-page">
+    <main class="ev-status-shell">
+        <a class="ev-status-brand" href="/" aria-label="EyeViora - Trang chủ">
+            <img src="{% static 'core/img/EyeViora/logoEyeViora.png' %}" alt="" width="48" height="48"><span>EyeViora</span>
+        </a>
+        <section class="ev-status-card">
+            <p class="ev-status-code">{% block status_code %}{% endblock %}</p>
+            <h1>{% block heading %}{% endblock %}</h1>
+            <p class="ev-status-copy">{% block description %}{% endblock %}</p>
+            <div class="ev-status-actions"><a class="ev-button ev-button-primary" href="/">Về trang chủ</a></div>
+        </section>
+        <p class="ev-status-footer">Chăm sóc mắt cùng EyeViora</p>
+    </main>
+</body>
+</html>

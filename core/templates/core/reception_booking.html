@@ -1,0 +1,33 @@
+{% extends 'core/operations/desk_base.html' %}
+{% block body_class %}reception-page{% endblock %}
+{% block title %}{% if appointment %}Đổi lịch{% else %}Đặt lịch hộ{% endif %}{% endblock %}
+{% block area %}Lịch tiếp nhận{% endblock %}
+{% block content %}
+<div class="head desk-page-heading"><div><p class="muted">{{ branch.ten }}</p><h1>{% if appointment %}Đổi lịch #{{ appointment.pk }}{% else %}Đặt lịch hộ bệnh nhân{% endif %}</h1></div></div>
+<section class="desk-booking-card">
+  <p>Chỉ tra cứu theo số điện thoại đã có hồ sơ. Màn hình này không tạo hồ sơ bệnh nhân mới.</p>
+  <form method="post" id="reception-booking-form" class="desk-booking-form">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div class="field{% if field.field.widget.input_type == 'checkbox' %} checkbox-field{% endif %}">{{ field.label_tag }} {{ field }}{{ field.errors }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}<div class="desk-form-actions"><button class="btn primary" type="submit">Lưu lịch</button><a class="btn secondary" href="{% url 'reception_dashboard' %}">Quay lại danh sách</a></div></form>
+</section>
+<script>
+(() => {
+  const form = document.getElementById('reception-booking-form');
+  if (!form) return;
+  const refresh = () => {
+    const params = new URLSearchParams();
+    ['so_dien_thoai', 'bac_si', 'ngay_kham'].forEach((key) => {
+      const value = form.elements.namedItem(key)?.value;
+      if (value) params.set(key, value);
+    });
+    form.querySelectorAll('input[name="dich_vu_dat_truoc_nhieu"]:checked').forEach((input) => {
+      params.append('dich_vu_dat_truoc_nhieu', input.value);
+    });
+    window.location.assign(`${window.location.pathname}?${params.toString()}`);
+  };
+  ['so_dien_thoai', 'bac_si', 'ngay_kham'].forEach((name) => {
+    const field = form.elements.namedItem(name);
+    if (field) field.addEventListener('change', refresh);
+  });
+  form.querySelectorAll('input[name="dich_vu_dat_truoc_nhieu"]').forEach((field) => field.addEventListener('change', refresh));
+})();
+</script>
+{% endblock %}

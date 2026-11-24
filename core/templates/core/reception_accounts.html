@@ -1,0 +1,8 @@
+{% extends 'core/operations/admin_base.html' %}
+{% block title %}Tài khoản lễ tân{% endblock %}
+{% block page_heading %}Tài khoản lễ tân{% endblock %}
+{% block content %}
+<header class="admin-page-head"><div><h1>{% if profile %}Sửa phân công lễ tân{% else %}Tài khoản lễ tân{% endif %}</h1><p>Quản lý tài khoản trong phạm vi chi nhánh được phân công.</p></div></header>
+<section class="admin-card admin-form-card">{% if not profile %}<h2>Phân công mới</h2>{% endif %}<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}<div class="actions"><button class="btn primary" type="submit">Lưu phân công</button><a class="btn" href="{% url 'reception_accounts' %}">Làm mới</a></div></form></section>
+{% if rows %}<section class="admin-card"><h2>Danh sách phân công</h2><div class="table-wrap"><table><thead><tr><th>Tài khoản</th><th>Chi nhánh được gán</th><th>Trạng thái tài khoản</th><th>Trạng thái chi nhánh</th><th>Thao tác</th></tr></thead><tbody>{% for row in rows %}<tr><td><strong>{{ row.user.username }}</strong></td><td>{{ row.chi_nhanh.ten }} <span class="muted">#{{ row.chi_nhanh_id }}</span></td><td><span class="status-badge" data-tone="{% if row.user.is_active %}paid{% else %}neutral{% endif %}">{{ row.user.is_active|yesno:'Hoạt động,Vô hiệu hóa' }}</span></td><td><span class="status-badge" data-tone="{% if row.chi_nhanh.dang_hoat_dong %}paid{% else %}neutral{% endif %}">{% if row.chi_nhanh.dang_hoat_dong %}Đang hoạt động{% else %}Ngừng hoạt động · lịch sử{% endif %}</span></td><td><a class="btn" href="{% url 'reception_account_edit' row.pk %}">Xem / sửa</a></td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+{% endblock %}

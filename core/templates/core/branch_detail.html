@@ -1,0 +1,171 @@
+{% load static catalog_money %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#103452">
+    <title>{{ bv.ten }} | EyeViora</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="{% static 'core/css/public.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/branch_detail.css' %}">
+</head>
+<body class="public-page">
+    {% include 'core/public_header.html' %}
+    <main class="ev-branch-page">
+        <section class="ev-branch-hero ev-wrap" aria-labelledby="branch-title">
+            <nav class="ev-branch-breadcrumb" aria-label="Đường dẫn">
+                <a href="{% url 'home' %}">Trang chủ</a><span aria-hidden="true">/</span>
+                <a href="{% url 'home' %}#chi-nhanh">Chi nhánh</a><span aria-hidden="true">/</span>
+                <span aria-current="page">{{ bv.ten }}</span>
+            </nav>
+            <div class="ev-branch-hero-grid">
+                <div class="ev-branch-intro">
+                    <p class="ev-kicker">EyeViora · Modern Eye Care</p>
+                    <div class="ev-branch-title-row">
+                        <h1 id="branch-title">{{ bv.ten }}</h1>
+                        <span class="ev-branch-status {% if bv.dang_hoat_dong %}is-open{% else %}is-closed{% endif %}">
+                            <span aria-hidden="true"></span>{% if bv.dang_hoat_dong %}Đang hoạt động{% else %}Ngừng hoạt động{% endif %}
+                        </span>
+                    </div>
+                    <div class="ev-branch-facts" aria-label="Thông tin phòng khám">
+                        <div class="ev-branch-fact">
+                            <span class="ev-branch-fact-icon" aria-hidden="true">⌖</span>
+                            <div><strong>Địa chỉ</strong><p>{{ bv.dia_chi }}{% if bv.phuong %}<br><span>{{ bv.phuong }}</span>{% endif %}</p></div>
+                        </div>
+                        <div class="ev-branch-fact">
+                            <span class="ev-branch-fact-icon" aria-hidden="true">◷</span>
+                            <div><strong>Giờ hoạt động</strong>
+                                {% if bv.gio_mo and bv.gio_dong %}<p>{{ bv.gio_mo|time:'H:i' }}–{{ bv.gio_dong|time:'H:i' }}</p>
+                                {% else %}<p>Chưa có thông tin giờ hoạt động.</p>{% endif %}
+                            </div>
+                        </div>
+                        {% if bv.so_dien_thoai or bv.email %}
+                        <div class="ev-branch-fact">
+                            <span class="ev-branch-fact-icon" aria-hidden="true">☎</span>
+                            <div><strong>Liên hệ</strong><p>
+                                {% if bv.so_dien_thoai %}<a href="tel:{{ bv.so_dien_thoai }}">{{ bv.so_dien_thoai }}</a>{% endif %}
+                                {% if bv.so_dien_thoai and bv.email %}<br>{% endif %}
+                                {% if bv.email %}<a href="mailto:{{ bv.email }}">{{ bv.email }}</a>{% endif %}
+                            </p></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="ev-branch-actions">
+                        {% if booking_available %}<a class="ev-button ev-button-primary" href="{% url 'dat_lich' bv.pk %}">Đặt lịch khám</a>
+                        {% else %}<span class="ev-branch-booking-unavailable">Chi nhánh hiện chưa có dịch vụ đủ điều kiện đặt lịch.</span>{% endif %}
+                        <a class="ev-button ev-button-outline" href="#vi-tri">Xem vị trí trên bản đồ</a>
+                    </div>
+                </div>
+                <figure class="ev-branch-cover">
+                    <img src="{{ branch_image_url }}" alt="Ảnh minh họa chung cho các chi nhánh EyeViora" width="900" height="650">
+                    <figcaption>Ảnh minh họa · Ảnh dùng chung cho các chi nhánh</figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <section class="ev-branch-section ev-wrap" id="vi-tri" aria-labelledby="location-title">
+            <div class="ev-branch-section-heading">
+                <div><p class="ev-kicker">Tìm đường đến EyeViora</p><h2 id="location-title">Vị trí &amp; chỉ đường</h2></div>
+                <p>{{ bv.dia_chi }}</p>
+            </div>
+            <div class="ev-branch-map-card">
+                <div class="ev-branch-map" id="branch-map" data-branch-id="{{ bv.pk }}"
+                     data-branch-name="{{ bv.ten }}" data-branch-address="{{ bv.dia_chi }}"
+                     data-route-api-url="{{ route_api_url }}" data-routing-configured="{{ routing_configured|yesno:'true,false' }}"
+                     data-routing-demo="{{ routing_demo|yesno:'true,false' }}">
+                    <div id="map" class="ev-branch-map-canvas" role="application" aria-label="Bản đồ vị trí phòng khám"></div>
+                    <div id="map-fallback" class="ev-branch-map-fallback" hidden>
+                        <p id="map-fallback-message">Bản đồ chưa tải được.</p>
+                        {% if map_available %}<a href="https://www.openstreetmap.org/?mlat={{ map_lat }}&amp;mlon={{ map_lon }}#map=16/{{ map_lat }}/{{ map_lon }}" target="_blank" rel="noopener">Mở vị trí trên OpenStreetMap</a>{% endif %}
+                    </div>
+                </div>
+                <div class="ev-branch-map-tools">
+                    <form id="route-csrf-token" hidden>{% csrf_token %}</form>
+                    <div class="ev-branch-route-panel" aria-label="Điều khiển chỉ đường">
+                        <div class="ev-branch-route-points">
+                            <div><dt>Điểm bắt đầu</dt><dd id="route-start-summary">Chưa chọn. Lấy vị trí hoặc chọn một điểm trên bản đồ.</dd></div>
+                            <div><dt>Điểm đến</dt><dd>{{ bv.ten }} · {{ bv.dia_chi }}</dd></div>
+                        </div>
+                        <div class="ev-branch-route-result" id="route-result" hidden>
+                            <div><dt>Quãng đường</dt><dd id="route-distance">—</dd></div>
+                            <div><dt>Thời gian dự kiến (ô tô)</dt><dd id="route-duration">—</dd></div>
+                        </div>
+                        <div class="ev-branch-map-actions">
+                            <button id="route-locate" class="ev-button ev-button-outline" type="button" {% if not map_available %}disabled{% endif %}>Lấy vị trí của tôi</button>
+                            <button id="route-select" class="ev-button ev-button-outline" type="button" aria-pressed="false" {% if not map_available %}disabled{% endif %}>Chọn điểm trên bản đồ</button>
+                            <button id="route-find" class="ev-button ev-button-primary" type="button" disabled>Tìm đường</button>
+                            <button id="route-clear" class="ev-button ev-button-outline" type="button" disabled>Xóa tuyến</button>
+                        </div>
+                        <p class="ev-branch-route-status" id="route-status" role="status" aria-live="polite">{% if map_available %}Chọn điểm bắt đầu để tìm tuyến đường trên bản đồ.{% else %}Chi nhánh chưa có tọa độ hợp lệ.{% endif %}</p>
+                        <p class="ev-branch-route-privacy">Tọa độ điểm bắt đầu chỉ được gửi tới dịch vụ định tuyến khi bạn tìm hoặc cập nhật tuyến đường; hệ thống không lưu tọa độ này.</p>
+                        {% if routing_demo %}<p class="ev-branch-route-notice">Đang dùng OSRM demo trong môi trường phát triển; dịch vụ giới hạn 1 yêu cầu/giây và không cam kết thời gian hoạt động.</p>{% elif not routing_configured %}<p class="ev-branch-route-notice">Chưa cấu hình routing service cho môi trường này; không thể tính tuyến đường.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="ev-branch-section ev-wrap" aria-labelledby="booking-services-title">
+            <div class="ev-branch-section-heading">
+                <div><p class="ev-kicker">Khám và tư vấn</p><h2 id="booking-services-title">Dịch vụ có thể đặt lịch</h2></div>
+                <p>Giá tham khảo; thanh toán sau khi khám hoàn tất.</p>
+            </div>
+            {% if services %}
+            <div class="ev-branch-service-grid">
+                {% for service in services %}
+                <article class="ev-branch-service-card">
+                    <span class="ev-branch-card-icon" aria-hidden="true">◎</span>
+                    <div class="ev-branch-service-copy"><h3>{{ service.ten }}</h3>
+                        {% if service.display_description %}<p>{{ service.display_description }}</p>{% else %}<p>Dịch vụ khám và tư vấn tại chi nhánh.</p>{% endif %}
+                    </div>
+                    <div class="ev-branch-card-bottom">
+                        <strong class="ev-branch-price">{% if service.don_gia %}{{ service.don_gia|vnd }}{% else %}Liên hệ{% endif %}</strong>
+                        <a class="ev-branch-small-button" href="{% url 'dat_lich' bv.pk %}?dich_vu_dat_truoc={{ service.pk }}">Đặt dịch vụ</a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}<p class="ev-branch-empty">Chi nhánh hiện chưa có dịch vụ đủ điều kiện đặt trước.</p>{% endif %}
+        </section>
+
+        <section class="ev-branch-section" aria-labelledby="doctors-title">
+            <div class="ev-wrap">
+                <div class="ev-branch-section-heading">
+                    <div><p class="ev-kicker">Đội ngũ chuyên môn</p><h2 id="doctors-title">Bác sĩ tại chi nhánh</h2></div>
+                    <p>{% if bac_sis %}{{ bac_sis|length }} bác sĩ nhận lịch tại chi nhánh này{% else %}Thông tin bác sĩ đủ điều kiện nhận lịch mới{% endif %}</p>
+                </div>
+                {% if bac_sis %}
+                <div class="ev-branch-doctor-grid">
+                    {% for bs in bac_sis %}
+                    <article class="ev-branch-doctor-card">
+                        <div class="ev-branch-doctor-avatar" aria-hidden="true">{{ bs.ho_ten|first|upper }}</div>
+                        <div class="ev-branch-doctor-main">
+                            <h3>{{ bs.ho_ten }}</h3><p>{{ bs.public_specialty }}</p>
+                            <span class="ev-branch-doctor-count">{{ bs.booking_service_count }} dịch vụ khám được phân công</span>
+                            {% if bs.booking_services %}<div class="ev-branch-doctor-badges" aria-label="Dịch vụ tiêu biểu">
+                                {% for service in bs.booking_services|slice:':3' %}<span>{{ service.ten }}</span>{% endfor %}
+                            </div>{% endif %}
+                        </div>
+                        {% if bs.booking_services %}<a class="ev-button ev-button-outline" href="{% url 'dat_lich' bv.pk %}?dich_vu_dat_truoc={{ bs.booking_services.0.pk }}&bac_si={{ bs.pk }}">Đặt lịch với bác sĩ</a>{% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}<p class="ev-branch-empty ev-wrap">Hiện chưa có bác sĩ đủ điều kiện nhận lịch mới tại chi nhánh.</p>{% endif %}
+            </div>
+        </section>
+
+        {% if booking_available %}
+        <section class="ev-branch-cta ev-wrap" aria-labelledby="branch-cta-title">
+            <div><p class="ev-kicker">EyeViora luôn sẵn sàng đồng hành</p><h2 id="branch-cta-title">Sẵn sàng chăm sóc đôi mắt của bạn?</h2><p>Chọn lịch khám tại {{ bv.ten }}.</p></div>
+            <a class="ev-button ev-button-light" href="{% url 'dat_lich' bv.pk %}">Đặt lịch khám tại chi nhánh này</a>
+        </section>
+        {% endif %}
+    </main>
+    {% include 'core/public_footer.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    {{ map_coordinates|json_script:"clinic-coordinates" }}
+    <script src="{% static 'core/js/branch_detail_map.js' %}" defer></script>
+    <script src="{% static 'core/js/public.js' %}" defer></script>
+</body>
+</html>

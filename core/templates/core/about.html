@@ -1,0 +1,66 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#103452">
+    <title>Giới thiệu EyeViora</title>
+    <link rel="stylesheet" href="{% static 'core/css/public.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body class="public-page">
+    {% include 'core/public_header.html' %}
+    <main>
+        <section class="ev-page-hero"><div class="ev-wrap"><p class="ev-kicker">EyeViora · Modern Eye Care</p><h1 class="ev-page-title">Chăm sóc mắt thuận tiện, kết nối giữa các chi nhánh</h1><p>EyeViora giúp bạn xem dịch vụ đang được cung cấp, tìm chi nhánh trên bản đồ và đặt lịch với bác sĩ được phân công.</p><a class="ev-button ev-button-primary" href="{% url 'dat_lich_picker' %}">Đặt lịch khám <span aria-hidden="true">↗</span></a></div></section>
+        <section class="ev-section"><div class="ev-wrap ev-grid ev-about-grid">
+            <article class="ev-card ev-about-copy"><p class="ev-kicker">Một điểm bắt đầu rõ ràng</p><h2>Chọn theo nhu cầu của bạn</h2><p>Quy trình đặt lịch lần lượt giúp bạn chọn chi nhánh, một hoặc nhiều dịch vụ, bác sĩ, ngày và khung giờ còn trống. Lịch được kiểm tra theo các quy tắc hiện hành.</p></article>
+            <article class="ev-card ev-about-copy"><p class="ev-kicker">Thông tin sau khi khám</p><h2>Theo dõi lịch và hồ sơ</h2><p>Sau khi đăng nhập, người bệnh có thể theo dõi lịch khám và thông tin được công bố trong hồ sơ. Chi phí cuối cùng được tổng hợp từ dịch vụ thực tế sau khi khám hoàn tất.</p></article>
+        </div></section>
+        <section class="ev-section-tight" style="background:#eff8fb"><div class="ev-wrap"><div class="ev-section-heading"><p class="ev-kicker">Tìm kiếm theo vị trí</p><h2>Mạng lưới chi nhánh</h2><p>{{ total_clinics }} chi nhánh đang có tọa độ hợp lệ để hiển thị trên bản đồ.</p></div>
+            <div class="ev-map-layout"><div class="ev-card"><h2 style="margin-top:0;color:var(--ev-navy);font-size:19px">Tìm hiểu thêm</h2><p class="ev-muted">Leaflet và OpenStreetMap hiển thị vị trí chi nhánh; dữ liệu vị trí được quản lý trong hệ thống. Bạn có thể chọn một chi nhánh để xem địa chỉ, liên hệ, giờ hoạt động và các dịch vụ được phân công.</p><a class="ev-button ev-button-primary" href="{% url 'home' %}#chi-nhanh">Xem danh sách chi nhánh</a><p class="ev-map-note">Không yêu cầu quyền vị trí cho đến khi bạn chủ động chọn định vị trên bản đồ.</p></div><div class="ev-about-map"><div id="about-map" aria-label="Bản đồ chi nhánh EyeViora"></div></div></div>
+        </div></section>
+    </main>
+    {% include 'core/public_footer.html' %}
+    {{ map_data|json_script:"about-map-data" }}
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{% static 'core/js/public.js' %}" defer></script>
+    <script>
+        (function () {
+            const mapData = JSON.parse(document.getElementById("about-map-data").textContent || "[]");
+            const mapElement = document.getElementById("about-map");
+            if (!mapData.length) { mapElement.innerHTML = '<div class="ev-empty">Chưa có chi nhánh với tọa độ hợp lệ để hiển thị.</div>'; return; }
+            const map = L.map("about-map", {keyboard: true, touchZoom: true});
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, referrerPolicy: "strict-origin-when-cross-origin", attribution: "&copy; OpenStreetMap"}).addTo(map);
+            const bounds = [];
+            mapData.forEach((item) => {
+                const popup = document.createElement('div');
+                const title = document.createElement('strong');
+                const image = document.createElement('img');
+                const address = document.createElement('span');
+                const actions = document.createElement('div');
+                title.textContent = item.name;
+                image.src = item.image_url;
+                image.alt = "Ảnh minh họa chung cho các chi nhánh EyeViora";
+                image.className = "ev-map-popup-image";
+                address.textContent = item.address || item.phuong || '';
+                actions.className = "ev-map-popup-actions";
+                const detail = document.createElement('a');
+                detail.href = item.detail_url;
+                detail.textContent = "Chi tiết";
+                actions.append(detail);
+                if (item.has_booking_options) {
+                    const booking = document.createElement('a');
+                    booking.href = item.booking_url;
+                    booking.textContent = "Đặt lịch khám";
+                    actions.append(booking);
+                }
+                popup.append(image, title, address, actions);
+                L.marker([item.lat, item.lon]).addTo(map).bindPopup(popup);
+                bounds.push([item.lat, item.lon]);
+            });
+            map.fitBounds(bounds, {padding: [20, 20]});
+        })();
+    </script>
+</body>
+</html>

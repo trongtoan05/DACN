@@ -1,0 +1,33 @@
+{% load static %}
+<header class="ev-header">
+    <div class="ev-header-inner">
+        <a class="ev-brand" href="{% url 'home' %}" aria-label="EyeViora — trang chủ">
+            <img class="ev-brand-logo" src="{% static 'core/img/EyeViora/logoEyeViora.png' %}" alt="Logo EyeViora" width="46" height="46">
+            <span class="ev-brand-copy"><strong>EyeViora</strong><small>MODERN EYE CARE</small></span>
+        </a>
+        <button class="ev-menu-toggle" type="button" aria-expanded="false" aria-controls="ev-navigation" aria-label="Mở menu">
+            <span></span><span></span><span></span>
+        </button>
+        <nav class="ev-navigation" id="ev-navigation" aria-label="Điều hướng chính">
+            <a href="{% url 'home' %}">Trang chủ</a>
+            <a href="{% url 'service_catalog_public' %}">Dịch vụ &amp; bảng giá</a>
+            <a href="{% url 'home' %}#chi-nhanh">Chi nhánh</a>
+            <a href="{% url 'gioi_thieu' %}">Giới thiệu</a>
+            <a href="{% url 'contact_feedback' %}">Liên hệ</a>
+        </nav>
+        <div class="ev-header-actions">
+            {% if user.is_authenticated %}
+                {% if nav_can_admin %}<a class="ev-account-link" href="{% url 'custom_admin_dashboard' %}">Quản trị</a>
+                {% elif nav_can_collect %}<a class="ev-account-link" href="{% url 'payment_list' %}">Thu ngân</a>
+                {% elif user.le_tan_chi_nhanh %}<a class="ev-account-link" href="{% url 'reception_dashboard' %}">Tiếp nhận</a>
+                {% elif user.bac_si %}<a class="ev-account-link" href="{% url 'bac_si_home' %}">Khu vực bác sĩ</a>
+                {% elif nav_is_patient %}<a class="ev-account-link" href="{% url 'profile' %}">{{ nav_patient_name|default:'Tài khoản bệnh nhân' }}</a>
+                {% else %}<a class="ev-account-link" href="{% url 'upcoming_appointments' %}">Lịch khám</a>{% endif %}
+                <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="ev-link-button" type="submit">Đăng xuất</button></form>
+            {% else %}
+                <a class="ev-account-link" href="{% url 'login' %}">Đăng nhập</a>
+            {% endif %}
+            <a class="ev-button ev-button-primary ev-header-book" href="{% url 'dat_lich_picker' %}">Đặt lịch khám <span aria-hidden="true">↗</span></a>
+        </div>
+    </div>
+</header>

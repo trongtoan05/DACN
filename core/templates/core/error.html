@@ -1,0 +1,24 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#103452">
+    <title>Thông báo | EyeViora</title>
+    <link rel="stylesheet" href="{% static 'core/css/public.css' %}">
+</head>
+<body class="public-page">
+    {% include 'core/public_header.html' %}
+    <main class="ev-wrap ev-inline-error">
+        <section class="card" role="alert">
+            <p class="ev-kicker">EyeViora hỗ trợ bạn</p>
+            <h1>Chưa thể tiếp tục</h1>
+            <p>{{ msg }}</p>
+            <a class="ev-button ev-button-primary" href="{% url 'home' %}">Về trang chủ</a>
+        </section>
+    </main>
+    {% include 'core/public_footer.html' %}
+    <script src="{% static 'core/js/public.js' %}" defer></script>
+</body>
+</html>

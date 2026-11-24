@@ -1,0 +1,61 @@
+{% extends 'core/operations/desk_base.html' %}
+{% load catalog_money %}
+{% block body_class %}reception-page{% endblock %}
+{% block title %}Tiếp nhận · {{ branch.ten }}{% endblock %}
+{% block area %}Tiếp nhận bệnh nhân{% endblock %}
+{% block content %}
+<div class="head desk-page-heading">
+  <div><h1>Tiếp nhận bệnh nhân</h1><p class="muted">Chi nhánh được phân công: <strong>{{ branch.ten }}</strong></p></div>
+  <div class="head-actions"><a class="btn secondary" href="{% url 'affected_appointments' %}">Lịch bị ảnh hưởng</a><a class="btn primary" href="{% url 'reception_book' %}">＋ Đặt lịch hộ bệnh nhân</a></div>
+</div>
+<section aria-label="Thống kê lịch hôm nay">
+  <div class="reception-stats-heading"><h2>Tình hình hôm nay</h2><span>{{ stats.total }} lịch hẹn</span></div>
+  <div class="reception-stats">
+    <div class="reception-stat"><span>Chờ tiếp nhận</span><strong>{{ stats.waiting }}</strong></div>
+    <div class="reception-stat"><span>Đã đến</span><strong>{{ stats.arrived }}</strong></div>
+    <div class="reception-stat"><span>Đang khám</span><strong>{{ stats.examining }}</strong></div>
+    <div class="reception-stat"><span>Hoàn tất</span><strong>{{ stats.finished }}</strong></div>
+    <div class="reception-stat"><span>Tổng lịch</span><strong>{{ stats.total }}</strong></div>
+  </div>
+</section>
+<section aria-labelledby="appointments-heading">
+  <div class="head"><div><h2 id="appointments-heading">Lịch hẹn trong ngày</h2><p class="muted">{{ page_obj.paginator.count }} lịch phù hợp trong phạm vi chi nhánh.</p></div></div>
+  <form method="get" class="filters" role="search">
+    <label>Ngày khám <input type="date" name="date" value="{{ date|date:'Y-m-d' }}"></label>
+    <label>Tìm bệnh nhân hoặc mã lịch <input name="q" value="{{ search }}" maxlength="100" placeholder="Tên, số điện thoại hoặc mã lịch"></label>
+    <label>Trạng thái tiếp nhận <select name="status"><option value="">Tất cả</option><option value="cho_xac_nhan" {% if status == 'cho_xac_nhan' %}selected{% endif %}>Đang chờ</option><option value="da_xac_nhan" {% if status == 'da_xac_nhan' %}selected{% endif %}>Đã xác nhận</option><option value="da_tiep_nhan" {% if status == 'da_tiep_nhan' %}selected{% endif %}>Đã tiếp nhận</option><option value="vang_mat" {% if status == 'vang_mat' %}selected{% endif %}>Vắng mặt</option></select></label>
+    <div class="filter-actions"><button class="btn primary" type="submit">Lọc lịch</button><a class="btn secondary" href="{% url 'reception_dashboard' %}">Xóa lọc</a></div>
+  </form>
+  <div class="table-wrap"><table class="reception-table responsive-table">
+    <thead><tr><th>Mã lịch</th><th>Ngày · giờ</th><th>Bệnh nhân</th><th>Điện thoại</th><th>Bác sĩ</th><th>Dịch vụ</th><th>Tiếp nhận</th><th>Khám</th><th>Thao tác</th></tr></thead>
+    <tbody>{% for a in page_obj %}<tr>
+      <td data-label="Mã lịch">#{{ a.pk }}</td><td data-label="Ngày · giờ">{{ a.ngay_kham|date:'d/m/Y' }}<br>{{ a.gio_kham|time:'H:i' }}</td><td data-label="Bệnh nhân"><strong>{{ a.benh_nhan.ho_ten }}</strong></td><td data-label="Điện thoại">{{ a.benh_nhan.so_dien_thoai|default:'—' }}</td><td data-label="Bác sĩ">{{ a.bac_si.ho_ten }}</td>
+      <td data-label="Dịch vụ">{% with booked=a.dich_vu_dat_truoc_nhieu.all %}{% if booked %}<details class="desk-services"><summary>{{ booked|length }} dịch vụ</summary><ul>{% for service in booked %}<li>{{ service.ten }}</li>{% endfor %}</ul></details>{% elif a.dich_vu_dat_truoc %}{{ a.dich_vu_dat_truoc.ten }}{% else %}—{% endif %}{% endwith %}</td>
+      <td data-label="Tiếp nhận"><span class="status-badge" data-tone="{% if a.trang_thai_tiep_nhan == 'da_tiep_nhan' %}paid{% elif a.trang_thai_tiep_nhan == 'vang_mat' %}danger{% elif a.trang_thai_tiep_nhan == 'da_xac_nhan' %}pending{% else %}warn{% endif %}">{{ a.get_trang_thai_tiep_nhan_display }}</span></td>
+      <td data-label="Khám"><span class="status-badge" data-tone="{% if a.trang_thai == 'xong' %}paid{% elif a.trang_thai == 'dang' %}pending{% elif a.trang_thai == 'huy' %}danger{% else %}neutral{% endif %}">{{ a.get_trang_thai_display }}</span></td>
+      <td class="desk-row-actions">
+        {% if a.trang_thai == 'cho' and a.trang_thai_tiep_nhan == 'cho_xac_nhan' or a.trang_thai == 'cho' and a.trang_thai_tiep_nhan == 'da_xac_nhan' %}
+          <form method="post" action="{% url 'reception_transition' a.pk 'arrive' %}">{% csrf_token %}<button class="btn primary" type="submit">Tiếp nhận</button></form>
+          <details class="desk-row-menu"><summary>Thêm</summary><div>
+            {% if a.trang_thai_tiep_nhan == 'cho_xac_nhan' %}<form method="post" action="{% url 'reception_transition' a.pk 'confirm' %}">{% csrf_token %}<button type="submit">Xác nhận lịch</button></form>{% endif %}
+            <a href="{% url 'reception_reschedule' a.pk %}">Đổi lịch</a>
+            <form method="post" action="{% url 'reception_cancel' a.pk %}">{% csrf_token %}<label>Lý do hủy<textarea name="ly_do" minlength="10" maxlength="500" required></textarea></label><button type="submit" class="secondary">Hủy lịch</button></form>
+            <form method="post" action="{% url 'reception_transition' a.pk 'no_show' %}">{% csrf_token %}<button type="submit" class="secondary">Đánh dấu vắng</button></form>
+          </div></details>
+        {% elif a.trang_thai == 'xong' and a.trang_thai_tiep_nhan == 'cho_xac_nhan' or a.trang_thai == 'xong' and a.trang_thai_tiep_nhan == 'da_xac_nhan' %}<form method="post" action="{% url 'reception_transition' a.pk 'confirm_after_exam' %}">{% csrf_token %}<label class="desk-confirm-label"><input type="checkbox" name="patient_present" value="yes" required> Bệnh nhân đang có mặt</label><button class="btn primary" type="submit">Xác nhận có mặt · mở thu</button></form>
+        {% elif a.trang_thai_tiep_nhan == 'da_tiep_nhan' %}<span class="muted">Đã tiếp nhận</span>
+        {% elif a.trang_thai_tiep_nhan == 'vang_mat' %}<span class="muted">Đã đánh dấu vắng</span>{% else %}—{% endif %}
+      </td>
+    </tr>{% empty %}<tr><td colspan="9" class="empty-row">Không có lịch hẹn phù hợp với bộ lọc hiện tại.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if page_obj.has_other_pages %}<nav class="pagination" aria-label="Phân trang lịch hẹn">{% if page_obj.has_previous %}<a class="btn secondary" href="?date={{ date|date:'Y-m-d' }}&amp;q={{ search|urlencode }}&amp;status={{ status }}&amp;page={{ page_obj.previous_page_number }}">Trước</a>{% endif %}<span>Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn secondary" href="?date={{ date|date:'Y-m-d' }}&amp;q={{ search|urlencode }}&amp;status={{ status }}&amp;page={{ page_obj.next_page_number }}">Sau</a>{% endif %}</nav>{% endif %}
+</section>
+<section aria-labelledby="counter-payments-heading">
+  <div class="desk-support-head"><div><h2 id="counter-payments-heading">Hóa đơn cần xử lý tại quầy</h2><p class="muted">{{ invoice_count }} hóa đơn đang chờ hoặc cần đối soát tại chi nhánh này.</p></div><a class="btn secondary" href="{% url 'payment_list' %}?status=unpaid">Mở danh sách thu ngân</a></div>
+  {% if invoice_page %}<div class="table-wrap"><table class="counter-invoice-table"><thead><tr><th>Mã</th><th>Bệnh nhân</th><th>Tổng phải thu</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>{% for a in invoice_page|slice:':5' %}<tr><td>#{{ a.hoa_don.pk }}<br><span class="muted">Lịch #{{ a.pk }} · {{ a.ngay_kham|date:'d/m' }} {{ a.gio_kham|time:'H:i' }}</span></td><td>{{ a.benh_nhan.ho_ten }}</td><td class="money">{{ a.hoa_don.so_tien|vnd }}</td>
+      <td><span class="status-badge" data-tone="{% if a.hoa_don.can_doi_soat %}danger{% else %}warn{% endif %}">{% if a.hoa_don.can_doi_soat %}Cần đối soát{% else %}{{ a.hoa_don.get_trang_thai_display }}{% endif %}</span></td><td><a class="btn secondary" href="{% url 'payment_detail' a.pk %}">Chi tiết</a></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>{% else %}<p class="desk-empty-state">Hiện không có hóa đơn cần xử lý tại quầy.</p>{% endif %}
+</section>
+{% endblock %}

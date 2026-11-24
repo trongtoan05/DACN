@@ -1,0 +1,19 @@
+{% extends 'core/operations/desk_base.html' %}
+{% block title %}Lịch bị ảnh hưởng · {{ branch.ten }}{% endblock %}
+{% block area %}Lịch bị ảnh hưởng{% endblock %}
+{% block content %}
+<div class="desk-page-heading"><h1>Lịch khám bị ảnh hưởng bởi bác sĩ nghỉ</h1><p>Chi nhánh: <strong>{{ branch.ten }}</strong>. Chỉ các lịch thuộc chi nhánh này được hiển thị.</p></div>
+{% for group in groups %}
+<section class="desk-card" aria-labelledby="absence-{{ group.absence.pk }}">
+  <h2 id="absence-{{ group.absence.pk }}">{{ group.absence.bac_si.ho_ten }} · {{ group.absence.bat_dau|date:'d/m/Y H:i' }} đến {{ group.absence.ket_thuc|date:'d/m/Y H:i' }}</h2>
+  <p>{{ group.absence.ly_do }}</p>
+  <div class="table-wrap"><table class="responsive-table"><thead><tr><th>Lịch</th><th>Bệnh nhân</th><th>Thời gian</th><th>Trạng thái</th><th>Chuyển bác sĩ</th><th>Thao tác</th></tr></thead><tbody>
+  {% for a in group.appointments %}<tr>
+    <td>#{{ a.pk }}</td><td>{{ a.benh_nhan.ho_ten }}</td><td>{{ a.ngay_kham|date:'d/m/Y' }} {{ a.gio_kham|time:'H:i' }}</td><td>{{ a.get_trang_thai_display }} · {{ a.get_trang_thai_tiep_nhan_display }}</td>
+    <td>{% if a.can_reassign %}<form method="post" action="{% url 'reassign_affected_appointment' a.pk %}">{% csrf_token %}<label>Bác sĩ phù hợp còn trống<select name="bac_si" required><option value="">Chọn bác sĩ</option>{% for candidate in a.replacement_candidates %}<option value="{{ candidate.pk }}">{{ candidate.ho_ten }}</option>{% endfor %}</select></label><label>Lý do<textarea name="ly_do" minlength="10" maxlength="500" required></textarea></label><button class="btn primary" type="submit">Chuyển lịch</button></form>{% else %}<span class="muted">Không có bác sĩ thay thế đủ điều kiện ở khung giờ này.</span>{% endif %}</td>
+    <td>{% if a.trang_thai == 'cho' and a.trang_thai_tiep_nhan != 'da_tiep_nhan' and not a.hoa_don %}<a class="btn secondary" href="{% url 'reception_reschedule' a.pk %}">Đổi thời gian</a><form method="post" action="{% url 'reception_cancel' a.pk %}">{% csrf_token %}<input type="hidden" name="return_to" value="affected"><label>Lý do hủy<textarea name="ly_do" minlength="10" maxlength="500" required></textarea></label><button class="btn secondary" type="submit">Hủy lịch</button></form>{% else %}<span class="muted">Cần xử lý theo trạng thái hiện tại</span>{% endif %}</td>
+  </tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% empty %}<p class="desk-empty-state">Hiện không có lịch hẹn bị ảnh hưởng trong chi nhánh này.</p>{% endfor %}
+{% endblock %}

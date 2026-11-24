@@ -1,0 +1,21 @@
+{% extends 'core/operations/admin_base.html' %}
+{% block title %}Nghỉ đột xuất của bác sĩ{% endblock %}
+{% block page_heading %}Nghỉ đột xuất của bác sĩ{% endblock %}
+{% block content %}
+<section class="admin-card">
+  <h1>Ghi nhận bác sĩ nghỉ đột xuất</h1>
+  <p>Hệ thống dò các lịch khám bị ảnh hưởng. Lễ tân chi nhánh sẽ xử lý từng lịch; hệ thống không tự đổi bác sĩ hoặc hủy lịch.</p>
+  <form method="post" action="{% url 'doctor_absence_create' %}" class="form-grid">{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}
+    <button class="admin-button primary" type="submit">Lưu lịch nghỉ và dò lịch bị ảnh hưởng</button>
+  </form>
+</section>
+<section class="admin-card">
+  <h2>Lịch nghỉ gần đây</h2>
+  <div class="table-wrap"><table><thead><tr><th>Bác sĩ / chi nhánh</th><th>Khoảng nghỉ</th><th>Lý do</th><th>Lịch bị ảnh hưởng</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+  {% for row in rows %}<tr><td>{{ row.bac_si.ho_ten }}<br><small>{{ row.bac_si.chi_nhanh.ten }}</small></td><td>{{ row.bat_dau|date:'d/m/Y H:i' }} – {{ row.ket_thuc|date:'d/m/Y H:i' }}</td><td>{{ row.ly_do }}</td><td>{{ row.affected_count }}</td><td>{% if row.dang_ap_dung %}Đang áp dụng{% else %}Đã đóng{% endif %}</td><td>{% if row.dang_ap_dung %}<form method="post" action="{% url 'doctor_absence_close' row.pk %}">{% csrf_token %}<button class="admin-button" type="submit">Đóng lịch nghỉ</button></form>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6">Chưa có lịch nghỉ đột xuất.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

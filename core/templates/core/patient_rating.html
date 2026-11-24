@@ -1,0 +1,87 @@
+﻿{% extends 'core/patient/base.html' %}
+{% block title %}Đánh giá sau khám{% endblock %}
+{% block page_title %}Đánh giá trải nghiệm{% endblock %}
+{% block page_subtitle %}<p>Chia sẻ cảm nhận của bạn để EyeViora cải thiện chất lượng phục vụ.</p>{% endblock %}
+{% block extra_head %}
+<style>
+    .rating-layout{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.4fr);gap:18px;align-items:start}
+    .rating-visit,.rating-content{border:1px solid var(--patient-border);border-radius:20px;background:#fff;box-shadow:var(--patient-shadow)}
+    .rating-visit{padding:24px;background:linear-gradient(145deg,#103452,#0879ba);color:#fff}
+    .rating-visit-label{margin:0 0 9px;color:#c8edf5;font-size:12px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+    .rating-visit h2{margin:0;color:#fff;font-size:22px;line-height:1.3}
+    .rating-visit p{margin:12px 0 0;color:#e1f1f8}
+    .rating-score{display:flex;align-items:center;gap:12px;margin-top:22px;padding:14px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.1)}
+    .rating-score strong{font-size:30px;line-height:1}
+    .rating-score span{color:#e1f1f8;font-size:13px}
+    .rating-content{padding:clamp(20px,4vw,32px)}
+    .rating-content h2{margin:0 0 8px;color:var(--patient-navy);font-size:22px}
+    .rating-intro{margin:0 0 22px;color:var(--patient-muted)}
+    .rating-form{display:grid;gap:20px}
+    .rating-field{display:grid;gap:9px}
+    .rating-field>label,.rating-label{color:var(--patient-navy);font-weight:750}
+    .rating-field textarea{width:100%;min-height:145px;padding:13px 15px;border:1px solid #c9d9e4;border-radius:12px;font:inherit;resize:vertical}
+    .rating-field textarea:focus{outline:3px solid rgba(16,184,188,.2);border-color:var(--patient-teal)}
+    .rating-stars{display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:8px}
+    .rating-star{position:relative;display:grid;width:52px;height:52px;place-items:center;border:1px solid var(--patient-border);border-radius:14px;background:#f7fafc;color:#a9b8c3;cursor:pointer;transition:.16s ease}
+    .rating-star input{position:absolute;width:1px;height:1px;opacity:0}
+    .rating-star span{font-size:30px;line-height:1}
+    .rating-star:has(input:checked),.rating-star:has(input:checked)~.rating-star,.rating-star:hover,.rating-star:hover~.rating-star{border-color:#f3c85b;background:#fff8df;color:#e5a900}
+    .rating-star:focus-within{outline:3px solid rgba(16,184,188,.25)}
+    .rating-errors,.rating-form .errorlist{margin:0;padding-left:19px;color:#a52b37}
+    .rating-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .rating-thanks{padding:14px 16px;border:1px solid #b8e3cc;border-radius:13px;background:#f0fbf5;color:#216b43}
+    .rating-thanks p{margin:5px 0 0}
+    .rating-back{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 14px;border:1px solid var(--patient-border);border-radius:10px;color:var(--patient-blue);font-weight:700;text-decoration:none}
+    .rating-back:hover{background:var(--patient-light)}
+    .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    @media(max-width:720px){.rating-layout{grid-template-columns:1fr}.rating-visit{padding:20px}.rating-star{width:48px;height:48px}}
+</style>
+{% endblock %}
+{% block patient_content %}
+<div class="rating-layout">
+    <section class="rating-visit" aria-label="Thông tin lượt khám">
+        <p class="rating-visit-label">Lượt khám hoàn tất</p>
+        <h2>{{ appointment.bac_si.chi_nhanh.ten }}</h2>
+        <p>{{ appointment.ngay_kham|date:'d/m/Y' }} · {{ appointment.bac_si.ho_ten }}</p>
+        {% if rating %}<div class="rating-score"><strong>{{ rating.diem }}/5</strong><span>Điểm bạn đã đánh giá</span></div>{% endif %}
+    </section>
+
+    <section class="rating-content">
+        {% if rating %}
+            <h2>Đánh giá của bạn</h2>
+            <p class="rating-intro">Cảm ơn bạn đã chia sẻ trải nghiệm với EyeViora.</p>
+            <div class="rating-thanks"><strong>Nhận xét</strong><p>{{ rating.nhan_xet|default:'Bạn chưa nhập nhận xét.' }}</p></div>
+            <p class="rating-intro" style="margin-top:14px">Gửi lúc {{ rating.ngay_tao|date:'d/m/Y H:i' }}.</p>
+            {% if not rating.dang_hien_thi %}<p class="rating-intro">Đánh giá hiện không hiển thị trong danh sách đánh giá.</p>{% endif %}
+        {% else %}
+            <h2>Bạn đánh giá thế nào?</h2>
+            <p class="rating-intro">Chọn số sao và để lại nhận xét nếu bạn muốn.</p>
+            <form method="post" class="rating-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <div class="rating-field">
+                    <span class="rating-label">{{ form.diem.label }}</span>
+                    <div class="rating-stars" role="radiogroup" aria-label="Chọn mức đánh giá từ 1 đến 5 sao">
+                        {% for radio in form.diem %}
+                            <label class="rating-star" for="{{ radio.id_for_label }}" title="{{ radio.choice_label }}">
+                                {{ radio.tag }}<span aria-hidden="true">★</span><span class="visually-hidden">{{ radio.choice_label }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    {{ form.diem.errors }}
+                </div>
+                <div class="rating-field">
+                    <label for="{{ form.nhan_xet.id_for_label }}">{{ form.nhan_xet.label }} <span style="font-weight:400;color:var(--patient-muted)">(không bắt buộc)</span></label>
+                    {{ form.nhan_xet }}
+                    {{ form.nhan_xet.errors }}
+                </div>
+                <div class="rating-actions">
+                    <button class="patient-button" type="submit">Gửi đánh giá</button>
+                    <a class="rating-back" href="{% url 'medical_history' %}">Quay lại lịch sử khám</a>
+                </div>
+            </form>
+        {% endif %}
+        {% if rating %}<a class="rating-back" style="margin-top:18px" href="{% url 'medical_history' %}">Quay lại lịch sử khám</a>{% endif %}
+    </section>
+</div>
+{% endblock %}

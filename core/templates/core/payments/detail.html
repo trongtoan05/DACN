@@ -1,0 +1,120 @@
+{% extends 'core/payments/base.html' %}
+{% load catalog_money payments_ui %}
+{% block title %}Hóa đơn · Lịch khám #{{ lich.pk }}{% endblock %}
+{% block area %}{% if monitor %}Giám sát hóa đơn{% else %}Thu tiền sau khám{% endif %}{% endblock %}
+{% block content %}
+<section class="invoice-summary" id="tong-quan" aria-label="Tóm tắt hóa đơn">
+    <div class="invoice-summary-main">
+        <p class="eyebrow">{% if invoice %}Hóa đơn #{{ invoice.pk }}{% else %}Chưa lập hóa đơn{% endif %} · Lịch #{{ lich.pk }}</p>
+        <h1>{{ lich.benh_nhan.ho_ten }}</h1>
+        <p class="muted">{{ lich.bac_si.chi_nhanh.ten }} · {{ lich.ngay_kham|date:'d/m/Y' }} lúc {{ lich.gio_kham|time:'H:i' }} · Bác sĩ {{ lich.bac_si.ho_ten }}</p>
+        <div class="status-layer">
+            {% if invoice %}
+                {% if refund_required %}<span class="status-badge" data-tone="danger">Thu trùng · cần xử lý</span>
+                {% elif invoice.can_doi_soat or overdue_pending %}<span class="status-badge" data-tone="danger">Cần đối soát</span>
+                {% elif pending %}<span class="status-badge" data-tone="pending">Đang chờ xác nhận</span>
+                {% else %}<span class="status-badge" data-tone="{{ invoice.trang_thai|tone }}">{{ invoice.get_trang_thai_display }}</span>{% endif %}
+                {% with latest=attempts|last %}{% if latest %}<span class="status-badge" data-tone="{{ latest.trang_thai|tone }}">{{ latest.get_phuong_thuc_display }} · {{ latest.get_trang_thai_display }}</span>{% endif %}{% endwith %}
+                {% if invoice.ngay_thanh_toan %}<span class="muted">Đã ghi nhận {{ invoice.ngay_thanh_toan|date:'d/m/Y H:i' }}</span>{% endif %}
+            {% else %}<span class="status-badge" data-tone="neutral">Chưa lập hóa đơn</span>{% endif %}
+        </div>
+    </div>
+    <div class="invoice-summary-side">
+        {% if invoice %}<p class="summary-amount">{{ invoice.so_tien|vnd }}<small>Tổng bệnh nhân phải trả</small></p>{% endif %}
+        <div class="summary-actions">
+            {% if can_start or can_cash %}<a class="btn primary" href="#tab-thanh-toan">Thanh toán</a>
+            {% elif can_open_collection %}<a class="btn primary" href="{% url 'payment_detail' lich.pk %}">Mở màn hình thu tiền</a>{% endif %}
+            <a class="btn secondary" href="{% url detail_route lich.pk %}">Làm mới trạng thái</a>
+        </div>
+    </div>
+</section>
+
+{% if counter_waiting %}<p class="notice" role="status">Chưa thể thu vì lịch chưa được xác nhận bệnh nhân đã có mặt. Vào <a href="{% url 'reception_dashboard' %}">màn Tiếp nhận</a>, tìm lịch đã khám xong và xác nhận bệnh nhân đang có mặt tại quầy để mở thanh toán.</p>{% endif %}
+{% if monitor %}<p class="notice info">Giám sát toàn hệ thống · chỉ xem.{% if collector_access %} Muốn nhận tiền, mở <a href="{% url 'payment_list' %}">màn thu tiền sau khám</a>.{% else %} Tài khoản này chỉ có quyền giám sát; cần dùng tài khoản thu ngân để nhận tiền.{% endif %}</p>{% endif %}
+{% if refund_required %}<p class="notice error" role="alert"><strong>Thu trùng — cần hoàn tiền.</strong> VNPAY xác nhận giao dịch thành công sau khi hóa đơn đã hoàn tất (tham chiếu <code>{{ refund_attempt.ma_tham_chieu }}</code>{% if refund_attempt.ma_giao_dich_vnpay %}, mã giao dịch <code>{{ refund_attempt.ma_giao_dich_vnpay }}</code>{% endif %}{% if refund_attempt.vnp_pay_date %}, lúc {{ refund_attempt.vnp_pay_date }}{% endif %}). Không thu thêm tiền; cần xử lý hoàn lại {{ refund_attempt.so_tien|vnd }}.</p>{% endif %}
+{% if completion_error %}<p class="notice error" role="alert">{{ completion_error }}</p>{% endif %}
+{% if config_error %}<p class="notice error" role="alert">{{ config_error }}</p>{% endif %}
+{% if invoice_error %}<p class="notice error" role="alert">{{ invoice_error }}</p>{% endif %}
+{% if amount_error %}<p class="notice error" role="alert">{{ amount_error }}</p>{% endif %}
+{% if pending %}<p class="notice info" role="status">Đang chờ xác nhận thanh toán. Không thực hiện lần thu mới trong lúc giao dịch đang xử lý.</p>{% endif %}
+{% if overdue_pending %}<p class="notice error" role="alert">Đã quá hạn chờ IPN nhưng chưa rõ kết quả. Tiếp tục khóa tiền mặt, VNPAY và sửa dịch vụ; cần đối soát trước khi xử lý tiếp.</p>{% endif %}
+{% if invoice and invoice.can_doi_soat and not refund_required and not overdue_pending %}<p class="notice error" role="alert">Có kết quả giao dịch mâu thuẫn. Đã khóa lần thu mới; cần đối soát với VNPAY trước khi xử lý tiếp.</p>{% endif %}
+
+{% if invoice %}
+    <a id="tab-hoa-don" role="tab" aria-controls="panel-hoa-don" href="#panel-hoa-don">Hóa đơn</a>
+    <a id="tab-thanh-toan" role="tab" aria-controls="panel-thanh-toan" href="#panel-thanh-toan">Thanh toán</a>
+    <a id="tab-lich-su" role="tab" aria-controls="panel-lich-su" href="#panel-lich-su">Lịch sử &amp; Nhật ký</a>
+</nav>
+
+<section class="invoice-panel" id="panel-hoa-don" role="tabpanel" aria-labelledby="tab-hoa-don" tabindex="0">
+    {% if can_edit_services %}
+    <section class="invoice-service-editor" id="dich-vu">
+        <div class="panel-heading"><div><h2>Dịch vụ thực hiện</h2><p class="muted">Phí lấy từ dịch vụ đã xác nhận và bảng giá đã chốt.</p></div></div>
+        <form method="post" action="{% url 'payment_services_save' lich.pk %}">{% csrf_token %}
+            {% include 'core/exam_services/editor.html' %}
+            <button class="btn primary" type="submit">Lưu dịch vụ và tính lại hóa đơn</button>
+        </form>
+    </section>
+    {% endif %}
+    <section class="invoice-lines" id="hoa-don">
+        <div class="panel-heading">
+            <div><h2>Chi tiết các khoản phí</h2><p class="muted">Phiếu thanh toán nội bộ, không phải hóa đơn điện tử có giá trị pháp lý.</p></div>
+            <div class="actions">
+                {% if can_view_receipt %}<a class="btn secondary" href="{% url 'receipt_view' invoice.pk %}" target="_blank" rel="noopener">Xem phiếu PDF</a><a class="btn secondary" href="{% url 'receipt_download' invoice.pk %}">Tải PDF</a><a class="btn secondary" href="{% url 'receipt_print' invoice.pk %}" target="_blank" rel="noopener">In phiếu</a>{% endif %}
+            </div>
+        </div>
+        {% if invoice.nguon == 'services' %}
+            <p class="muted">Phiếu khám #{{ invoice.phieu_kham_id }} · phiên bản {{ invoice.phien_ban }}.</p>
+            <div class="table-wrap"><table class="invoice-line-table">
+                <thead><tr><th scope="col">Dịch vụ</th><th scope="col">Nguồn</th><th scope="col">Đơn giá</th><th scope="col">SL</th><th scope="col">Thành tiền</th></tr></thead>
+                <tbody>{% for line in invoice_lines %}<tr><td>{{ line.ma_dich_vu }} · {{ line.ten_dich_vu }}</td><td>{% if line.la_dich_vu_dat_truoc %}Đặt trước, đã thực hiện{% else %}Phát sinh{% endif %}</td><td class="money">{{ line.don_gia|vnd }}</td><td>{{ line.so_luong }}</td><td class="money">{{ line.thanh_tien|vnd }}</td></tr>{% empty %}<tr><td colspan="5">Chưa có chi tiết dịch vụ.</td></tr>{% endfor %}</tbody>
+                <tfoot><tr><th colspan="4">Tổng bệnh nhân phải trả</th><td class="money"><strong>{{ invoice.so_tien|vnd }}</strong></td></tr></tfoot>
+            </table></div>
+        {% else %}<p>Hóa đơn lịch sử không có chi tiết dịch vụ; giữ nguyên số tiền đã lưu: <strong>{{ invoice.so_tien|vnd }}</strong>.</p>{% endif %}
+    </section>
+</section>
+
+<section class="invoice-panel" id="panel-thanh-toan" role="tabpanel" aria-labelledby="tab-thanh-toan" tabindex="0">
+    <section class="payment-status-card" id="thanh-toan">
+        <div class="panel-heading"><div><h2>Phương thức và trạng thái</h2><p class="muted">Số tiền phải thu: <strong>{{ invoice.so_tien|vnd }}</strong></p></div></div>
+        {% if can_resolve_reconciliation %}
+        <form method="post" action="{% url 'cashier_monitor_reconcile_close' invoice.pk %}" class="reconcile-form">{% csrf_token %}
+            <p class="notice info">Hệ thống xác minh từng giao dịch qua VNPAY. Chỉ kết quả thất bại cuối cùng đã xác nhận mới cho phép thu lại. Kết quả chưa rõ vẫn giữ khóa; lý do và mã tham chiếu được lưu nhật ký.</p>
+            {% for attempt in attempts %}<p class="muted">Giao dịch <code>{{ attempt.ma_tham_chieu }}</code> · {{ attempt.get_trang_thai_display }}{% if attempt.ma_giao_dich_vnpay %} · mã VNPAY <code>{{ attempt.ma_giao_dich_vnpay }}</code>{% endif %}</p>{% endfor %}
+            <p><label for="reconcile-reason">Lý do đối soát (ít nhất 10 ký tự)</label><textarea id="reconcile-reason" name="reason" rows="2" required minlength="10" maxlength="500"></textarea></p>
+            <p><label for="reconcile-reference">Mã tham chiếu đã kiểm tra</label><input id="reconcile-reference" name="reference" type="text" required maxlength="32" autocomplete="off"></p>
+            <button type="submit">Đối soát với VNPAY</button>
+        </form>
+        {% endif %}
+        {% if can_start %}<div class="payment-method-card"><h3>VNPAY</h3><p>Khởi tạo thanh toán tại quầy bằng số tiền đã lưu trên hóa đơn.</p><form method="post" action="{% url 'payment_start' invoice.pk %}">{% csrf_token %}<button class="btn primary" type="submit">Thanh toán VNPAY</button></form></div>{% endif %}
+        {% if can_cash %}<form method="post" action="{% url 'payment_cash' invoice.pk %}" class="desk-payment-confirmation">{% csrf_token %}<h3>Thu tiền mặt · {{ invoice.so_tien|vnd }}</h3><p>Chỉ xác nhận sau khi đã nhận đủ tiền mặt từ bệnh nhân.</p><input type="hidden" name="version" value="{{ invoice.phien_ban }}"><p><label><input type="checkbox" name="received_full" value="yes" required> Tôi đã nhận đủ {{ invoice.so_tien|vnd }} cho hóa đơn #{{ invoice.pk }}.</label></p><button class="btn primary" type="submit">Xác nhận đã nhận tiền</button></form>{% endif %}
+        <p class="muted">VNPAY chỉ hoàn tất sau khi hệ thống xác nhận IPN hợp lệ. Tiền mặt được ghi nhận sau thao tác xác nhận có kiểm tra.</p>
+    </section>
+    <section class="receipt-email-card" id="email">
+        <div class="panel-heading"><div><h2>Email phiếu thanh toán</h2><p class="muted">Email được xử lý theo trạng thái giao dịch thực tế.</p></div></div>
+        {% if receipt_email %}
+            {% if receipt_email.trang_thai == 'sent' %}<div class="email-delivery-success" role="status"><span class="email-delivery-icon" aria-hidden="true">✓</span><div><strong>Đã gửi email xác nhận</strong><p>Phiếu hóa đơn #{{ invoice.pk }} đã gửi đến <b>{{ receipt_email.email_nhan }}</b>.</p><div class="email-delivery-meta"><span>Gửi lúc {{ receipt_email.gui_luc|date:'d/m/Y H:i:s' }}</span><span>·</span><span>Lần gửi {{ receipt_email.so_lan_thu }}</span>{% if show_technical %}<span>· Mailtrap Email Testing</span>{% endif %}</div><div class="email-delivery-actions"><a class="btn secondary" href="{% url 'receipt_view' invoice.pk %}">Xem PDF</a><a class="btn secondary" href="{% url 'receipt_download' invoice.pk %}">Tải PDF</a></div></div></div>
+            {% else %}<p><span class="status-badge" data-tone="{{ receipt_email.trang_thai|tone }}">{{ receipt_email.get_trang_thai_display }}</span> <span class="muted">Lần xử lý {{ receipt_email.so_lan_thu }}</span></p>{% if receipt_email.gui_luc %}<p>Ghi nhận lúc {{ receipt_email.gui_luc|date:'d/m/Y H:i:s' }}</p>{% endif %}{% endif %}
+            {% if receipt_email_error %}<p class="notice error">{{ receipt_email_error }}</p>{% endif %}
+            {% if receipt_email.trang_thai == 'sending' or receipt_email.trang_thai == 'unknown' %}<p class="notice info">Không gửi lại khi kết quả còn chưa rõ. Liên hệ Admin nếu trạng thái kéo dài.</p>{% endif %}
+        {% elif invoice.so_tien == 0 %}<p>Hóa đơn 0 VND được hệ thống hoàn tất tự động; không tạo giao dịch thu tiền.</p>
+        {% else %}<p>Chưa có bản ghi gửi email. Thông báo được kích hoạt sau khi thanh toán thành công.</p>{% endif %}
+        {% if can_retry_email %}<form method="post" action="{% url 'receipt_email_retry' invoice.pk %}">{% csrf_token %}<input type="hidden" name="attempts" value="{{ receipt_email.so_lan_thu|default:0 }}"><button class="btn secondary" type="submit">{% if receipt_email %}Thử gửi lại email{% else %}Gửi email xác nhận{% endif %}</button></form>{% endif %}
+    </section>
+</section>
+
+<section class="invoice-panel invoice-history-panel" id="panel-lich-su" role="tabpanel" aria-labelledby="tab-lich-su" tabindex="0">
+    {% if invoice_logs %}<details class="history-disclosure"><summary>Lịch sử chi phí <span>{{ invoice_logs|length }} bản ghi</span></summary><div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người thao tác</th><th>Thay đổi</th></tr></thead><tbody>{% for log in invoice_logs %}<tr><td>{{ log.thoi_gian|date:'d/m/Y H:i:s' }}</td><td>{{ log.nguoi_thuc_hien.username|default:'Hệ thống' }}</td><td>Phiên bản {{ log.du_lieu_moi.phien_ban }}: {% if log.du_lieu_cu %}{{ log.du_lieu_cu.so_tien|vnd }} → {% endif %}{{ log.du_lieu_moi.so_tien|vnd }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+    {% if service_logs %}<details class="history-disclosure"><summary>Lịch sử dịch vụ <span>{{ service_logs|length }} bản ghi</span></summary><div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người thao tác</th><th>Thay đổi</th><th>Dịch vụ</th></tr></thead><tbody>{% for log in service_logs %}<tr><td>{{ log.thoi_gian|date:'d/m/Y H:i:s' }}</td><td>{{ log.nguoi_thuc_hien.username|default:'Hệ thống' }}</td><td>{{ log.get_hanh_dong_display }}{% if log.hanh_dong == 'update' %} · SL {{ log.quantity_before }} → {{ log.quantity_after }}{% elif log.hanh_dong == 'create' %} · SL {{ log.quantity_after }}{% elif log.hanh_dong == 'delete' %} · SL {{ log.quantity_before }}{% endif %}{% if 'sửa ghi chú' in log.ghi_chu %}<br><small>Có cập nhật ghi chú</small>{% endif %}</td><td>{{ log.service_label }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+    {% if attempts %}<details class="history-disclosure"><summary>Lịch sử giao dịch <span>{{ attempts|length }} giao dịch</span></summary><div class="table-wrap"><table><thead><tr><th>Tham chiếu / thời gian</th><th>Số tiền</th><th>Phương thức / trạng thái</th><th>Thông tin giao dịch</th></tr></thead><tbody>{% for attempt in attempts %}<tr><td><code class="ref">{{ attempt.ma_tham_chieu }}</code><br>{{ attempt.ngay_tao|date:'d/m/Y H:i:s' }}</td><td class="money">{{ attempt.so_tien|vnd }}</td><td>{{ attempt.get_phuong_thuc_display }}<br><span class="status-badge" data-tone="{{ attempt.trang_thai|tone }}">{{ attempt.get_trang_thai_display }}</span></td><td>Nhân viên: {{ attempt.nguoi_tao.username|default:'—' }}<br>Chi nhánh: {{ attempt.chi_nhanh.ten|default:'Giao dịch cũ chưa lưu chi nhánh' }}<br>Hoàn tất: {{ attempt.hoan_tat_luc|date:'d/m/Y H:i:s'|default:'—' }}{% if attempt.phuong_thuc == 'VNPAY' %}<details class="technical-details"><summary>Thông tin VNPAY</summary>Mã phản hồi: {{ attempt.ma_phan_hoi|default:'—' }}<br>Trạng thái: {{ attempt.trang_thai_vnpay|default:'—' }}<br>Mã giao dịch: {{ attempt.ma_giao_dich_vnpay|default:'—' }}</details>{% endif %}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+    {% if audit_entries %}<details class="history-disclosure"><summary>Nhật ký thanh toán <span>{{ audit_entries|length }} bản ghi</span></summary><p class="muted">Bao gồm thay đổi do nhân viên và phản hồi IPN tự động.</p><div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Đối tượng</th><th>Người thực hiện</th><th>Nội dung</th></tr></thead><tbody>{% for log in audit_entries %}<tr><td>{{ log.thoi_gian|date:'d/m/Y H:i:s' }}</td><td>{% if log.model_name == 'HoaDon' %}Hóa đơn #{{ log.object_id }}{% else %}Giao dịch #{{ log.object_id }}{% endif %}</td><td>{{ log.nguoi_thuc_hien.username|default:'Hệ thống / VNPAY' }}</td><td>{{ log.ghi_chu }}{% if log.ip_address %}<br><span class="muted">IP {{ log.ip_address }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+    {% if show_technical and ipn_url %}<details class="history-disclosure"><summary>Cấu hình Sandbox</summary><p>IPN URL: <code>{{ ipn_url }}</code></p><p>ReturnURL: <code>{{ return_url }}</code></p></details>{% endif %}
+    {% if not invoice_logs and not service_logs and not attempts and not audit_entries %}<p class="desk-empty-state">Chưa có lịch sử giao dịch hoặc nhật ký cho hóa đơn này.</p>{% endif %}
+</section>
+{% endif %}
+
+{% if not invoice and not completion_error and not monitor %}<section class="invoice-recovery">
+    <h2>Chưa có hóa đơn</h2><p class="muted">Ca khám lịch sử chưa có hóa đơn. Số tiền chỉ được tạo từ dịch vụ đã chốt, không nhập từ trình duyệt.</p>
+    <form method="post" action="{% url 'invoice_create' lich.pk %}">{% csrf_token %}<button class="btn primary" type="submit">Lập hóa đơn từ dịch vụ</button></form>
+</section>{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'core/operations/admin_base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_heading %}Xác nhận thao tác{% endblock %}
+{% block body_class %}admin-confirm-page{% endblock %}
+{% block content %}
+<section class="card confirm-card">
+    <h1>{{ title }}</h1>
+    <p>Bản ghi: <strong>{{ object_name }}</strong></p>
+    {% if impact %}
+        <p class="notice"><strong>Không thể xóa.</strong> Thao tác sẽ ảnh hưởng dữ liệu cần lưu giữ:</p>
+        <ul>{% for label, count in impact %}<li>{{ label }}: {{ count }}</li>{% endfor %}</ul>
+        <p>Hãy ngừng sử dụng hoặc hủy lịch liên quan, không xóa dữ liệu y tế.</p>
+    {% else %}
+        <p class="notice">Không phát hiện dữ liệu y tế liên quan. Xóa là thao tác không thể hoàn tác.</p>
+    {% endif %}
+    <div class="actions">
+        {% if can_delete %}
+            <form method="post">{% csrf_token %}<button class="btn primary" type="submit">Xác nhận xóa</button></form>
+        {% endif %}
+        <a class="btn secondary" href="{{ back_href }}">Quay lại danh sách</a>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends 'core/operations/admin_base.html' %}
+{% load pagination %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_heading %}{{ title }}{% endblock %}
+{% block content %}
+<header class="admin-page-head">
+    <div><h1>{{ title }}</h1><p>Tra cứu và quản lý dữ liệu theo quyền hiện có.</p></div>
+    <div class="admin-actions">{% if not read_only %}<a class="btn primary" href="{% url 'custom_admin_model_create' model_key %}">+ Tạo mới</a>{% endif %}<a class="btn" href="{% url 'custom_admin_dashboard' %}">Tổng quan</a></div>
+</header>
+
+<section class="admin-card admin-list-card">
+    <form class="admin-filters" method="get" role="search">
+        <label>Tìm kiếm<input type="search" name="q" value="{{ q }}" placeholder="Nhập từ khóa"></label>
+        {% if model_key == 'chi-nhanh' %}<label>Phạm vi chi nhánh<select name="branch_scope"><option value="active" {% if branch_scope == 'active' %}selected{% endif %}>Đang hoạt động</option><option value="history" {% if branch_scope == 'history' %}selected{% endif %}>Ngừng hoạt động · lịch sử</option><option value="all" {% if branch_scope == 'all' %}selected{% endif %}>Tất cả</option></select></label>{% endif %}
+        {% for f in filter_meta %}
+            <label>{{ f.label }}
+                {% if f.type == 'select' %}<select name="{{ f.name }}"><option value="">Tất cả</option>{% for opt in f.options %}<option value="{{ opt.value }}" {% if f.selected == opt.value %}selected{% endif %}>{{ opt.label }}</option>{% endfor %}</select>
+                {% elif f.type == 'date' %}<input type="date" name="{{ f.name }}" value="{{ f.selected }}">
+                {% else %}<input type="text" name="{{ f.name }}" value="{{ f.selected }}">{% endif %}
+            </label>
+        {% endfor %}
+        <div class="filter-actions"><button class="btn primary" type="submit">Lọc dữ liệu</button><a class="btn" href="{% url 'custom_admin_model_list' model_key %}">Xóa lọc</a></div>
+    </form>
+    <p class="list-summary">{{ page_obj.paginator.count }} {% if model_key == 'chi-nhanh' %}chi nhánh{% else %}bản ghi{% endif %}{% if model_key == 'chi-nhanh' and branch_scope == 'active' %} · phạm vi mặc định là chi nhánh đang hoạt động{% elif model_key == 'chi-nhanh' and branch_scope == 'history' %} · dữ liệu lịch sử được giữ nguyên{% endif %}</p>
+
+    {% if model_key == 'chi-nhanh' %}
+        <div class="table-wrap"><table class="admin-branch-list"><thead><tr><th>Tên chi nhánh</th><th>Địa chỉ</th><th>Liên hệ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+            {% for row in rows %}<tr><td><strong>{{ row.ten }}</strong><br><small class="muted">Mã chi nhánh #{{ row.id }}</small></td><td>{{ row.dia_chi }}{% if row.phuong %}<br><span class="muted">{{ row.phuong }}</span>{% endif %}</td><td>{{ row.so_dien_thoai|default:'—' }}</td><td><span class="status-badge" data-tone="{% if row.dang_hoat_dong %}paid{% else %}neutral{% endif %}">{% if row.dang_hoat_dong %}Đang hoạt động{% else %}Ngừng hoạt động · lịch sử{% endif %}</span></td><td><div class="actions"><a class="btn" href="{% url 'custom_admin_model_edit' model_key row.id %}">Xem / chỉnh sửa</a>{% if row.can_delete %}<a class="btn danger" href="{% url 'custom_admin_model_delete' model_key row.id %}">Xóa</a>{% endif %}</div></td></tr>{% empty %}<tr><td colspan="5"><div class="empty-state">Không có chi nhánh trong phạm vi đã chọn.</div></td></tr>{% endfor %}
+        </tbody></table></div>
+    {% else %}
+        <div class="table-wrap"><table><thead><tr>{% for col in columns %}<th scope="col">{{ col.label }}</th>{% endfor %}<th scope="col">Thao tác</th></tr></thead><tbody>
+            {% for row in rows %}<tr>{% for value in row.values %}<td>{{ value }}</td>{% endfor %}<td>{% if row.can_manage %}<div class="actions"><a class="btn" href="{% url 'custom_admin_model_edit' model_key row.id %}">Sửa</a>{% if row.can_delete %}<a class="btn danger" href="{% url 'custom_admin_model_delete' model_key row.id %}">Xóa</a>{% endif %}</div>{% else %}<span class="muted">Đã khóa</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="{{ columns|length|add:1 }}"><div class="empty-state">Không có dữ liệu phù hợp.</div></td></tr>{% endfor %}
+        </tbody></table></div>
+    {% endif %}
+    {% pagination page_obj %}
+</section>
+{% endblock %}

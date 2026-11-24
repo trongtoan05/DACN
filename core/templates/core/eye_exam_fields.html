@@ -1,0 +1,70 @@
+<style>
+  .eye-block { margin:18px 0; padding:16px; border:1px solid rgba(31,42,43,.12); border-radius:14px; }
+  .eye-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .eye-field { display:flex; flex-direction:column; gap:6px; margin:8px 0; }
+  .eye-field input,.eye-field textarea { width:100%; max-width:100%; padding:9px 10px; border:1px solid #cadbd4; border-radius:8px; font:inherit; }
+  .eye-field .helptext { color:#5b6b6a; font-size:12px; }
+  .eye-errors,.errorlist { color:#9f2d2d; }
+  @media(max-width:640px) { .eye-grid { grid-template-columns:1fr; } }
+</style>
+<section class="eye-block" aria-labelledby="eye-results-heading">
+  <h3 id="eye-results-heading">Kết quả khám mắt</h3>
+  <p>Chỉ ghi những chỉ số đã thực hiện; để trống nếu chưa đo. Thị lực nhận dạng văn bản như 6/10, 20/40 hoặc CF.</p>
+  {{ eye_form.non_field_errors }}
+  <div class="eye-grid">
+    <div>
+      <h4>Mắt phải (OD)</h4>
+      {% for field in eye_form %}{% if field.name == 'thi_luc_phai_khong_kinh' or field.name == 'thi_luc_phai_co_kinh' or field.name == 'nhan_ap_phai' or field.name == 'sph_phai' or field.name == 'cyl_phai' or field.name == 'axis_phai' %}<div class="eye-field">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endif %}{% endfor %}
+    </div>
+    <div>
+      <h4>Mắt trái (OS)</h4>
+      {% for field in eye_form %}{% if field.name == 'thi_luc_trai_khong_kinh' or field.name == 'thi_luc_trai_co_kinh' or field.name == 'nhan_ap_trai' or field.name == 'sph_trai' or field.name == 'cyl_trai' or field.name == 'axis_trai' %}<div class="eye-field">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endif %}{% endfor %}
+    </div>
+  </div>
+  <div class="eye-field">{{ eye_form.ban_phan_truoc.label_tag }}{{ eye_form.ban_phan_truoc }}{{ eye_form.ban_phan_truoc.errors }}</div>
+  <div class="eye-field">{{ eye_form.day_mat.label_tag }}{{ eye_form.day_mat }}{{ eye_form.day_mat.errors }}</div>
+  <div class="eye-field">{{ eye_form.ghi_nhan_khac.label_tag }}{{ eye_form.ghi_nhan_khac }}{{ eye_form.ghi_nhan_khac.errors }}</div>
+</section>
+<section class="eye-block" aria-labelledby="medicine-heading">
+  <h3 id="medicine-heading">Đơn thuốc (nếu có)</h3>
+  <p>Nhập từng thuốc riêng. Hệ thống không tự đề xuất thuốc hoặc liều dùng.</p>
+  {{ medicine_formset.management_form }}{{ medicine_formset.non_form_errors }}
+  <div id="medicine-form-list">
+    {% for form in medicine_formset %}{% include 'core/medicine_form_row.html' %}{% endfor %}
+  </div>
+  <template id="medicine-empty-row">{% include 'core/medicine_form_row.html' with form=medicine_formset.empty_form %}</template>
+  <button type="button" class="btn ghost" id="add-medicine-row">Thêm thuốc</button>
+</section>
+<script>
+  (function () {
+    var add = document.getElementById('add-medicine-row');
+    var list = document.getElementById('medicine-form-list');
+    var total = document.getElementById('id_medicine-TOTAL_FORMS');
+    var template = document.getElementById('medicine-empty-row');
+    if (!add || !list || !total || !template) return;
+    add.addEventListener('click', function () {
+      var index = Number(total.value);
+      if (index >= 10) return;
+      var row = document.createElement('div');
+      row.innerHTML = template.innerHTML.replace(/__prefix__/g, String(index));
+      list.appendChild(row.firstElementChild);
+      total.value = String(index + 1);
+      if (index + 1 >= 10) add.disabled = true;
+    });
+  })();
+</script>
+<section class="eye-block" aria-labelledby="glasses-heading">
+  <h3 id="glasses-heading">Đơn kính (nếu có)</h3>
+  <p>Kết quả khúc xạ không tự trở thành đơn kính. Bác sĩ xác nhận thông số kê riêng bên dưới.</p>
+  {{ glasses_form.non_field_errors }}
+  <div class="eye-grid">
+    <div><h4>Mắt phải (OD)</h4>
+      {% for field in glasses_form %}{% if field.name == 'sph_phai' or field.name == 'cyl_phai' or field.name == 'axis_phai' %}<div class="eye-field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}
+    </div>
+    <div><h4>Mắt trái (OS)</h4>
+      {% for field in glasses_form %}{% if field.name == 'sph_trai' or field.name == 'cyl_trai' or field.name == 'axis_trai' %}<div class="eye-field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}
+    </div>
+  </div>
+  <div class="eye-field">{{ glasses_form.ghi_chu.label_tag }}{{ glasses_form.ghi_chu }}{{ glasses_form.ghi_chu.errors }}</div>
+  <div class="eye-field">{{ glasses_form.bac_si_xac_nhan }} {{ glasses_form.bac_si_xac_nhan.label_tag }}{{ glasses_form.bac_si_xac_nhan.errors }}</div>
+</section>

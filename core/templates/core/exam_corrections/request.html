@@ -1,0 +1,51 @@
+<!doctype html>
+{% load static %}
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Chỉnh sửa hồ sơ khám · EyeViora</title>
+    <link rel="stylesheet" href="{% static 'core/css/doctor.css' %}">
+    <style>
+        .correction-page{max-width:980px;margin:32px auto;padding:20px}
+        .correction-card{background:#fff;border:1px solid #dbe6ee;border-radius:18px;padding:24px;margin:16px 0}
+        .correction-form p{display:grid;gap:6px}.correction-form input,.correction-form textarea,.correction-form select{max-width:100%;padding:10px;border:1px solid #b9cad7;border-radius:8px}
+        .correction-form textarea{min-height:70px}.correction-form button,.correction-link{display:inline-block;padding:11px 16px;background:#0879ba;color:white;border:0;border-radius:9px;text-decoration:none}
+        .correction-form .errorlist{color:#a31d2d}.correction-notice{padding:12px;background:#eef7fb;border-radius:10px}
+    </style>
+</head>
+<body class="doctor-workspace">
+    {% include 'core/doctor_sidebar.html' %}
+    <main class="correction-page">
+        <section class="correction-card">
+            <h1>Chỉnh sửa phiếu khám đã hoàn tất</h1>
+            <p>Bệnh nhân: <strong>{{ exam.benh_nhan.ho_ten }}</strong> · {{ exam.lich_kham.bac_si.chi_nhanh.ten }} · {{ exam.lich_kham.ngay_kham|date:'d/m/Y' }}</p>
+            <div class="correction-notice">Bác sĩ phụ trách có thể lưu chỉnh sửa trực tiếp. Hệ thống giữ nguyên snapshot trước và sau, gồm kết quả chuyên môn, đơn thuốc, đơn kính, ảnh và dịch vụ đã ghi nhận. Chức năng này không thay đổi dịch vụ, hóa đơn hoặc giao dịch.</div>
+        </section>
+        <section class="correction-card">
+            <form method="post" class="correction-form">
+                {% csrf_token %}{{ form.non_field_errors }}
+                {% for field in form %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</p>{% endfor %}
+                <h2>Kết quả khám mắt</h2>
+                {{ eye_form.non_field_errors }}
+                {% for field in eye_form %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</p>{% endfor %}
+                <h2>Đơn kính</h2>
+                {{ glasses_form.non_field_errors }}
+                {% for field in glasses_form %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</p>{% endfor %}
+                <h2>Đơn thuốc</h2>
+                {{ medicine_formset.management_form }}
+                {{ medicine_formset.non_form_errors }}
+                {% for medicine_form in medicine_formset %}
+                    <fieldset><legend>Thuốc {{ forloop.counter }}</legend>
+                        {% for hidden in medicine_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        {% for field in medicine_form.visible_fields %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</p>{% endfor %}
+                    </fieldset>
+                {% endfor %}
+                <button type="submit">Lưu chỉnh sửa và giữ lịch sử</button>
+                <a class="correction-link" href="{% url 'phieu_kham_detail' exam.pk %}">Quay lại phiếu khám</a>
+            </form>
+        </section>
+    </main>
+    <script src="{% static 'core/js/doctor.js' %}" defer></script>
+</body>
+</html>

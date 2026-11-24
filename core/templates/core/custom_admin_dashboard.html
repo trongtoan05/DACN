@@ -1,0 +1,48 @@
+{% extends 'core/operations/admin_base.html' %}
+{% load catalog_money %}
+{% block title %}Tổng quan quản trị{% endblock %}
+{% block body_class %}admin-dashboard{% endblock %}
+{% block page_heading %}Tổng quan hệ thống{% endblock %}
+{% block content %}
+<header class="admin-page-head">
+    <div><h1>Tổng quan quản trị</h1><p>Theo dõi hoạt động thực tế trong phạm vi chi nhánh và ngày đã chọn.</p></div>
+    <div class="admin-actions"><a class="btn primary" href="{% url 'custom_admin_model_list' 'chi-nhanh' %}">Quản lý chi nhánh</a><a class="btn" href="{% url 'cashier_monitor' %}">Hóa đơn &amp; đối soát</a></div>
+</header>
+
+<section class="admin-kpis" aria-label="Chỉ số tổng quan">
+    <article class="admin-kpi"><div class="label">{% if branch_status == 'history' %}Chi nhánh hoạt động trong phạm vi{% else %}Chi nhánh đang hoạt động{% endif %}</div><div class="value">{{ stats.chi_nhanh }}</div></article>
+    <article class="admin-kpi"><div class="label">Bác sĩ trong phạm vi</div><div class="value">{{ stats.bac_si }}</div></article>
+    <article class="admin-kpi"><div class="label">Lịch hẹn trong kỳ</div><div class="value">{{ stats.lich_kham }}</div></article>
+    <article class="admin-kpi"><div class="label">Bệnh nhân có lịch trong kỳ</div><div class="value">{{ stats.benh_nhan }}</div></article>
+    <article class="admin-kpi"><div class="label">Lượt khám hoàn tất</div><div class="value">{{ stats.phieu_kham }}</div></article>
+    <article class="admin-kpi"><div class="label">Dịch vụ tại chi nhánh</div><div class="value">{{ stats.dich_vu }}</div></article>
+    <article class="admin-kpi"><div class="label">Hóa đơn đã thu</div><div class="value">{{ stats.hoa_don_da_thu }}</div></article>
+    <article class="admin-kpi"><div class="label">Doanh thu thực thu</div><div class="value">{{ stats.doanh_thu|vnd }}</div></article>
+</section>
+
+<section class="admin-card">
+    <h2>Hoạt động theo chi nhánh</h2>
+    <form method="get" class="admin-filters">
+        <label>Trạng thái chi nhánh<select name="branch_status"><option value="active" {% if branch_status == 'active' %}selected{% endif %}>Đang hoạt động</option><option value="history" {% if branch_status == 'history' %}selected{% endif %}>Ngừng hoạt động · lịch sử</option><option value="all" {% if branch_status == 'all' %}selected{% endif %}>Tất cả</option></select></label>
+        <label>Chi nhánh<select name="branch"><option value="">Tất cả trong phạm vi</option>{% for branch in branches %}<option value="{{ branch.pk }}" {% if selected_branch.pk == branch.pk %}selected{% endif %}>{{ branch.ten }}</option>{% endfor %}</select></label>
+        <label>Từ ngày<input type="date" name="date_from" value="{{ date_from }}"></label>
+        <label>Đến ngày<input type="date" name="date_to" value="{{ date_to }}"></label>
+        <div class="filter-actions"><button class="btn primary" type="submit">Áp dụng bộ lọc</button><a class="btn" href="{% url 'custom_admin_dashboard' %}">Xóa lọc</a></div>
+    </form>
+    <p class="list-summary">Thống kê theo ngày hẹn; doanh thu theo ngày thanh toán. Chỉ tính hóa đơn đã thu thành công, mỗi hóa đơn một lần.</p>
+    {% if filter_error %}<p class="notice error" role="alert">{{ filter_error }}</p>{% endif %}
+    <div class="table-wrap"><table class="admin-branch-table">
+        <thead><tr><th>Chi nhánh</th><th>Trạng thái</th><th>Bác sĩ</th><th>Dịch vụ</th><th>Lịch hẹn</th><th>Khám xong</th><th>Hóa đơn đã thu</th><th>Doanh thu</th></tr></thead>
+        <tbody>{% for branch in branch_stats %}<tr><td><strong>{{ branch.ten }}</strong><br><span class="muted">#{{ branch.id }}</span></td><td><span class="status-badge" data-tone="{% if branch.dang_hoat_dong %}paid{% else %}neutral{% endif %}">{% if branch.dang_hoat_dong %}Đang hoạt động{% else %}Ngừng hoạt động · lịch sử{% endif %}</span></td><td>{{ branch.doctor_count }}</td><td>{{ branch.service_count }}</td><td>{{ branch.appointment_count }}</td><td>{{ branch.completed_count }}</td><td>{{ branch.paid_invoice_count }}</td><td><strong>{{ branch.revenue|vnd }}</strong></td></tr>{% empty %}<tr><td colspan="8">Không có chi nhánh trong phạm vi đã chọn.</td></tr>{% endfor %}</tbody>
+    </table></div>
+</section>
+
+<section class="admin-status-grid" aria-label="Trạng thái lịch hẹn">
+    <div class="admin-status-item"><span>Chờ khám</span><strong>{{ status_counts.cho }}</strong></div><div class="admin-status-item"><span>Đang khám</span><strong>{{ status_counts.dang }}</strong></div><div class="admin-status-item"><span>Đã hoàn tất</span><strong>{{ status_counts.xong }}</strong></div><div class="admin-status-item"><span>Đã hủy</span><strong>{{ status_counts.huy }}</strong></div><div class="admin-status-item"><span>Vắng mặt</span><strong>{{ status_counts.vang_mat }}</strong></div>
+</section>
+
+<section class="admin-dashboard-grid">
+    <section class="dash-card"><h2>Lịch khám gần đây</h2><div class="table-wrap"><table><thead><tr><th>Ngày, giờ</th><th>Bệnh nhân</th><th>Bác sĩ / chi nhánh</th><th>Trạng thái</th></tr></thead><tbody>{% for lich in latest_appointments %}<tr><td>{{ lich.ngay_kham|date:'d/m/Y' }}<br><span class="muted">{{ lich.gio_kham|time:'H:i' }}</span></td><td>{{ lich.benh_nhan.ho_ten }}</td><td>{{ lich.bac_si.ho_ten }}<br><span class="muted">{{ lich.bac_si.chi_nhanh.ten }}</span></td><td>{% if lich.trang_thai_tiep_nhan == 'vang_mat' %}Vắng mặt{% else %}{{ lich.get_trang_thai_display }}{% endif %}</td></tr>{% empty %}<tr><td colspan="4">Chưa có lịch phù hợp bộ lọc.</td></tr>{% endfor %}</tbody></table></div></section>
+    <section class="dash-card"><h2>Truy cập nhanh</h2><div class="admin-quick-links"><a href="{% url 'service_list' %}"><strong>Dịch vụ &amp; bảng giá</strong><span>Danh mục và giá chung</span></a><a href="{% url 'reception_accounts' %}"><strong>Tài khoản lễ tân</strong><span>Phân công theo chi nhánh, gồm quyền thu tại quầy</span></a>{% if user.is_superuser %}<a href="{% url 'custom_admin_model_list' 'tai-khoan' %}"><strong>Tài khoản hệ thống</strong><span>Quản lý tài khoản theo quyền hiện có</span></a>{% endif %}</div></section>
+</section>
+{% endblock %}

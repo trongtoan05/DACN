@@ -1,0 +1,92 @@
+{% load static %}<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Quản trị{% endblock %} · EyeViora</title>
+    <link rel="stylesheet" href="{% static 'core/css/admin.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="admin-app {% block body_class %}{% endblock %}">
+    <aside class="admin-sidebar" id="admin-sidebar" aria-label="Điều hướng quản trị">
+        <a class="admin-brand" href="{% url 'custom_admin_dashboard' %}">
+            <img src="{% static 'core/img/EyeViora/logoEyeViora.png' %}" width="42" height="42" alt="Logo EyeViora">
+            <span><strong>EyeViora</strong><small>QUẢN TRỊ HỆ THỐNG</small></span>
+        </a>
+        <nav class="admin-nav">
+            <a class="admin-nav-link{% if request.resolver_match.url_name == 'custom_admin_dashboard' %} is-active{% endif %}" href="{% url 'custom_admin_dashboard' %}"><span aria-hidden="true">⌂</span>Tổng quan</a>
+
+            <details class="admin-nav-group" {% if model_key == 'chi-nhanh' or model_key == 'khoa' or model_key == 'gio-lam-viec-chi-nhanh' or model_key == 'dich-vu-chi-nhanh' %}open{% endif %}>
+                <summary><span aria-hidden="true">⌖</span>Chi nhánh</summary>
+                <div class="admin-subnav">
+                    <a href="{% url 'custom_admin_model_list' 'chi-nhanh' %}"{% if model_key == 'chi-nhanh' %} aria-current="page"{% endif %}>Danh sách chi nhánh</a>
+                    <a href="{% url 'custom_admin_model_list' 'gio-lam-viec-chi-nhanh' %}"{% if model_key == 'gio-lam-viec-chi-nhanh' %} aria-current="page"{% endif %}>Giờ hoạt động</a>
+                    <a href="{% url 'custom_admin_model_list' 'khoa' %}"{% if model_key == 'khoa' %} aria-current="page"{% endif %}>Khoa chuyên môn</a>
+                    <a href="{% url 'custom_admin_model_list' 'dich-vu-chi-nhanh' %}"{% if model_key == 'dich-vu-chi-nhanh' %} aria-current="page"{% endif %}>Dịch vụ tại chi nhánh</a>
+                </div>
+            </details>
+
+            <details class="admin-nav-group" {% if model_key == 'bac-si' or model_key == 'bac-si-dich-vu' or model_key == 'gio-lam-viec-bac-si' or model_key == 'tai-khoan' or model_key == 'benh-nhan' or request.resolver_match.url_name == 'doctor_absence_admin' or request.resolver_match.url_name == 'reception_accounts' or request.resolver_match.url_name == 'reception_account_edit' or request.resolver_match.url_name == 'cashier_list' or request.resolver_match.url_name == 'cashier_create' or request.resolver_match.url_name == 'cashier_edit' %}open{% endif %}>
+                <summary><span aria-hidden="true">♙</span>Nhân sự &amp; tài khoản</summary>
+                <div class="admin-subnav">
+                    <a href="{% url 'custom_admin_model_list' 'bac-si' %}"{% if model_key == 'bac-si' %} aria-current="page"{% endif %}>Bác sĩ</a>
+                    <a href="{% url 'custom_admin_model_list' 'gio-lam-viec-bac-si' %}"{% if model_key == 'gio-lam-viec-bac-si' %} aria-current="page"{% endif %}>Lịch làm việc bác sĩ</a>
+                    <a href="{% url 'doctor_absence_admin' %}"{% if request.resolver_match.url_name == 'doctor_absence_admin' %} aria-current="page"{% endif %}>Nghỉ đột xuất</a>
+                    <a href="{% url 'custom_admin_model_list' 'bac-si-dich-vu' %}"{% if model_key == 'bac-si-dich-vu' %} aria-current="page"{% endif %}>Phân công dịch vụ</a>
+                    {% if user.is_superuser %}<a href="{% url 'custom_admin_model_list' 'tai-khoan' %}"{% if model_key == 'tai-khoan' %} aria-current="page"{% endif %}>Tài khoản hệ thống</a>{% endif %}
+                    <a href="{% url 'reception_accounts' %}"{% if request.resolver_match.url_name == 'reception_accounts' or request.resolver_match.url_name == 'reception_account_edit' %} aria-current="page"{% endif %}>Tài khoản lễ tân</a>
+                    <a href="{% url 'custom_admin_model_list' 'benh-nhan' %}"{% if model_key == 'benh-nhan' %} aria-current="page"{% endif %}>Bệnh nhân</a>
+                </div>
+            </details>
+
+            <details class="admin-nav-group" {% if request.resolver_match.url_name == 'service_list' or request.resolver_match.url_name == 'service_create' or request.resolver_match.url_name == 'service_edit' or request.resolver_match.url_name == 'service_detail' or model_key == 'noi-dung-gioi-thieu' %}open{% endif %}>
+                <summary><span aria-hidden="true">▤</span>Danh mục &amp; nội dung</summary>
+                <div class="admin-subnav">
+                    <a href="{% url 'service_list' %}"{% if request.resolver_match.url_name == 'service_list' or request.resolver_match.url_name == 'service_create' or request.resolver_match.url_name == 'service_edit' or request.resolver_match.url_name == 'service_detail' %} aria-current="page"{% endif %}>Dịch vụ &amp; bảng giá</a>
+                    <a href="{% url 'custom_admin_model_list' 'noi-dung-gioi-thieu' %}"{% if model_key == 'noi-dung-gioi-thieu' %} aria-current="page"{% endif %}>Nội dung giới thiệu</a>
+                </div>
+            </details>
+
+            <details class="admin-nav-group" {% if model_key == 'lich-kham' or model_key == 'phieu-kham' or model_key == 'phieu-kham-hinh-anh' or model_key == 'lich-su-kham-benh' or model_key == 'log-lich-kham' or request.resolver_match.url_name == 'rating_admin_list' %}open{% endif %}>
+                <summary><span aria-hidden="true">▦</span>Lịch hẹn &amp; hồ sơ</summary>
+                <div class="admin-subnav">
+                    <a href="{% url 'custom_admin_model_list' 'lich-kham' %}"{% if model_key == 'lich-kham' %} aria-current="page"{% endif %}>Lịch khám</a>
+                    <a href="{% url 'exam_correction_review_list' %}"{% if request.resolver_match.url_name == 'exam_correction_review_list' or request.resolver_match.url_name == 'exam_correction_review' %} aria-current="page"{% endif %}>Yêu cầu sửa phiếu khám</a>
+                    <a href="{% url 'custom_admin_model_list' 'phieu-kham' %}"{% if model_key == 'phieu-kham' %} aria-current="page"{% endif %}>Phiếu khám</a>
+                    <a href="{% url 'custom_admin_model_list' 'phieu-kham-hinh-anh' %}"{% if model_key == 'phieu-kham-hinh-anh' %} aria-current="page"{% endif %}>Ảnh phiếu khám</a>
+                    <a href="{% url 'custom_admin_model_list' 'lich-su-kham-benh' %}"{% if model_key == 'lich-su-kham-benh' %} aria-current="page"{% endif %}>Lịch sử khám</a>
+                    <a href="{% url 'rating_admin_list' %}"{% if request.resolver_match.url_name == 'rating_admin_list' %} aria-current="page"{% endif %}>Đánh giá sau khám</a>
+                    <a href="{% url 'custom_admin_model_list' 'log-lich-kham' %}"{% if model_key == 'log-lich-kham' %} aria-current="page"{% endif %}>Nhật ký lịch khám</a>
+                </div>
+            </details>
+
+            <details class="admin-nav-group" {% if request.resolver_match.url_name == 'cashier_monitor' or request.resolver_match.url_name == 'cashier_monitor_detail' or model_key == 'log-he-thong' %}open{% endif %}>
+                <summary><span aria-hidden="true">₫</span>Thanh toán &amp; hệ thống</summary>
+                <div class="admin-subnav">
+                    <a href="{% url 'cashier_monitor' %}"{% if request.resolver_match.url_name == 'cashier_monitor' or request.resolver_match.url_name == 'cashier_monitor_detail' %} aria-current="page"{% endif %}>Hóa đơn &amp; đối soát</a>
+                    <a href="{% url 'custom_admin_model_list' 'log-he-thong' %}"{% if model_key == 'log-he-thong' %} aria-current="page"{% endif %}>Nhật ký hệ thống</a>
+                    <a href="{% url 'custom_admin_model_list' 'thong-bao' %}"{% if model_key == 'thong-bao' %} aria-current="page"{% endif %}>Thông báo</a>
+                </div>
+            </details>
+        </nav>
+        <div class="admin-sidebar-footer">
+            <a href="{% url 'home' %}">← Về trang EyeViora</a>
+            <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Đăng xuất</button></form>
+        </div>
+    </aside>
+    <div class="admin-scrim" data-admin-scrim></div>
+    <div class="admin-workspace">
+        <header class="admin-topbar">
+            <button class="admin-menu-toggle" type="button" data-admin-menu aria-label="Mở menu quản trị" aria-expanded="false" aria-controls="admin-sidebar">☰</button>
+            <div class="admin-page-heading"><span>EyeViora / Quản trị</span><strong>{% block page_heading %}{{ title|default:'Tổng quan' }}{% endblock %}</strong></div>
+            <div class="admin-account"><span class="admin-avatar" aria-hidden="true">{{ user.username|first|upper }}</span><span><strong>{{ user.get_full_name|default:user.username }}</strong><small>Quản trị viên</small></span></div>
+        </header>
+        <main class="admin-main">
+            {% for message in messages %}<div role="status" class="admin-alert {{ message.tags }}">{{ message }}</div>{% endfor %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{% static 'core/js/admin.js' %}" defer></script>
+    <script src="{% static 'core/js/validation_vi.js' %}" defer></script>
+</body>
+</html>

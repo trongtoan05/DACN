@@ -1,0 +1,18 @@
+EyeViora — Xác nhận lịch khám
+
+Xin chào {{ patient }}, lịch khám của bạn đã được ghi nhận thành công.
+
+Mã lịch hẹn: #{{ booking_id }}
+Thời gian: {{ appointment_at }}
+Bác sĩ: {{ doctor }}
+Chi nhánh: {{ branch }}
+Địa chỉ: {{ branch_address }}
+
+Dịch vụ đã đăng ký:
+{% for service in services %}- {{ service.ten }}
+{% empty %}- Chưa ghi nhận dịch vụ đặt trước
+{% endfor %}
+
+Vui lòng đến trước giờ hẹn khoảng 10 phút. Lịch đặt trước chưa phát sinh thanh toán; chi phí được xác định sau khi bác sĩ hoàn tất khám.
+
+EyeViora — Chăm sóc mắt tận tâm

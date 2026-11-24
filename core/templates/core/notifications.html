@@ -1,0 +1,33 @@
+{% extends 'core/patient/base.html' %}
+{% block title %}Thông báo{% endblock %}
+{% block page_title %}Thông báo{% endblock %}
+{% block page_subtitle %}<p>Cập nhật lịch khám và thông tin dành cho bạn.</p>{% endblock %}
+{% block heading_action %}
+    {% if thong_baos %}<form method="post" class="patient-notification-toolbar">{% csrf_token %}<input type="hidden" name="action" value="mark_all"><button class="patient-button secondary" type="submit">Đánh dấu tất cả đã đọc</button></form>{% endif %}
+{% endblock %}
+{% block patient_content %}
+    {% if thong_baos %}
+        <section class="patient-notification-list" aria-label="Danh sách thông báo">
+            {% for tb in thong_baos %}
+                <article class="patient-card patient-notification{% if not tb.da_doc %} is-unread{% endif %}">
+                    <div class="patient-notification-heading">
+                        <div><span class="patient-notification-type">{{ tb.get_loai_display }}</span><h2>{{ tb.tieu_de }}</h2></div>
+                        {% if not tb.da_doc %}<span class="patient-notification-unread">Chưa đọc</span>{% endif %}
+                    </div>
+                    <time class="patient-notification-time" datetime="{{ tb.thoi_gian|date:'c' }}">{{ tb.thoi_gian|date:"d/m/Y H:i" }}</time>
+                    <p class="patient-notification-copy">{{ tb.noi_dung }}</p>
+                    <div class="patient-actions">
+                        {% if tb.safe_link %}<a class="patient-button" href="{{ tb.safe_link }}">Xem chi tiết</a>{% endif %}
+                        {% if not tb.da_doc %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="mark_one"><input type="hidden" name="tb_id" value="{{ tb.id }}"><button class="patient-button secondary" type="submit">Đánh dấu đã đọc</button></form>{% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+    {% else %}
+        <section class="patient-panel patient-notification-empty" aria-live="polite">
+            <span class="patient-notification-empty-icon" aria-hidden="true">✓</span>
+            <h2>Bạn đã xem hết thông báo</h2>
+            <p>Khi có cập nhật về lịch khám, thông tin sẽ xuất hiện tại đây.</p>
+        </section>
+    {% endif %}
+{% endblock %}

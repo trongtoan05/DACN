@@ -1,0 +1,34 @@
+<style>
+  .doctor-services { margin:22px 0; padding:16px; border:1px solid rgba(31,42,43,.12); border-radius:14px; }
+  .doctor-service-row { display:grid; grid-template-columns:minmax(180px,2fr) 100px minmax(150px,2fr) auto; gap:10px; align-items:start; padding:10px 0; border-bottom:1px solid #e0e9e4; }
+  .doctor-service-row select,.doctor-service-row input,.doctor-service-row textarea { width:100%; max-width:100%; padding:8px; border:1px solid #cadbd4; border-radius:8px; font:inherit; }
+  .doctor-service-row .errors,.doctor-services .errorlist { color:#9f2d2d; }
+  @media(max-width:650px) { .doctor-service-row { grid-template-columns:1fr; } }
+</style>
+<section class="doctor-services" aria-labelledby="performed-services-heading">
+  <h3 id="performed-services-heading">Dịch vụ thực tế đã thực hiện</h3>
+  <p>Bác sĩ xác nhận các dịch vụ thực sự đã cung cấp. Dịch vụ đặt trước chưa được tính cho đến khi xác nhận thực hiện. Giá được tính sau khi hoàn tất khám; phần này không tạo hóa đơn.</p>
+  {% if booked_services %}
+    <p>Xác nhận riêng từng dịch vụ đặt trước đã thực hiện:</p>
+    {% for service in booked_services %}
+      <label><input type="checkbox" name="booked_performed" value="{{ service.pk }}" {% if service.pk in booked_performed_ids %}checked{% endif %}>
+        Đã thực hiện dịch vụ đặt trước: <strong>{{ service.ten }}</strong>
+      </label><br>
+    {% endfor %}
+  {% else %}<p>Lịch cũ hoặc lịch này không có dịch vụ đặt trước.</p>{% endif %}
+  {{ services_formset.management_form }}{{ services_formset.non_form_errors }}
+  <input type="hidden" name="services_revision" value="{{ services_revision }}">
+  <div id="doctor-service-rows">
+    {% for form in services_formset %}{% include 'core/doctor_service_row.html' %}{% endfor %}
+  </div>
+  <template id="doctor-service-empty">{% include 'core/doctor_service_row.html' with form=services_formset.empty_form %}</template>
+  <button type="button" class="btn ghost" id="doctor-service-add">Thêm dịch vụ phát sinh</button>
+</section>
+<script>
+ (function(){
+   var add=document.getElementById('doctor-service-add'), rows=document.getElementById('doctor-service-rows');
+   var total=document.getElementById('id_services-TOTAL_FORMS'), tpl=document.getElementById('doctor-service-empty');
+   if(!add||!rows||!total||!tpl)return;
+   add.addEventListener('click',function(){var i=Number(total.value);if(i>=50)return;var box=document.createElement('div');box.innerHTML=tpl.innerHTML.replace(/__prefix__/g,String(i));rows.appendChild(box.firstElementChild);total.value=String(i+1);if(i+1>=50)add.disabled=true;});
+ })();
+</script>

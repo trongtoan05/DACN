@@ -1,0 +1,40 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#103452">
+    <title>{% block title %}Khu vực bệnh nhân{% endblock %} · EyeViora</title>
+    <link rel="stylesheet" href="{% static 'core/css/public.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/patient.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="patient-area">
+    {% include 'core/public_header.html' %}
+    <main class="patient-shell">
+        <nav class="patient-nav" aria-label="Khu vực bệnh nhân">
+            <a href="{% url 'upcoming_appointments' %}"{% if request.resolver_match.url_name == 'upcoming_appointments' %} aria-current="page"{% endif %}>Lịch hẹn</a>
+            <a href="{% url 'medical_history' %}"{% if request.resolver_match.url_name == 'medical_history' or request.resolver_match.url_name == 'phieu_kham_detail' %} aria-current="page"{% endif %}>Lịch sử khám</a>
+            <a href="{% url 'profile' %}"{% if request.resolver_match.url_name == 'profile' %} aria-current="page"{% endif %}>Hồ sơ cá nhân</a>
+        </nav>
+        <header class="patient-page-heading">
+            <div>
+                <p class="patient-eyebrow">EYEViora · KHU VỰC BỆNH NHÂN</p>
+                <h1>{% block page_title %}Khu vực bệnh nhân{% endblock %}</h1>
+                {% block page_subtitle %}<p>Theo dõi lịch khám và thông tin của bạn.</p>{% endblock %}
+            </div>
+            {% block heading_action %}{% endblock %}
+        </header>
+        {% if messages %}
+            <div class="patient-messages" aria-live="polite">
+                {% for message in messages %}<p class="patient-message {{ message.tags }}">{{ message }}</p>{% endfor %}
+            </div>
+        {% endif %}
+        {% block patient_content %}{% endblock %}
+    </main>
+    {% include 'core/public_footer.html' %}
+    <script src="{% static 'core/js/public.js' %}" defer></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

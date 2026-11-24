@@ -1,0 +1,116 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#103452">
+    <meta name="description" content="EyeViora — tìm chi nhánh, chọn dịch vụ và đặt lịch chăm sóc mắt trực tuyến.">
+    <title>EyeViora — Modern Eye Care</title>
+    <link rel="stylesheet" href="{% static 'core/css/public.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body class="public-page">
+    {% include 'core/public_header.html' %}
+    {% if messages %}<div class="ev-alerts">{% for message in messages %}<div class="ev-alert {{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    <main>
+        <section class="ev-hero" aria-label="EyeViora — Modern Eye Care">
+            <div class="ev-slides" data-ev-slider role="region" aria-roledescription="carousel" aria-label="Giới thiệu EyeViora">
+                <article class="ev-slide is-active" aria-hidden="false" aria-roledescription="slide" aria-label="1 trên 3">
+                    <img class="ev-banner-image" src="{% static 'core/img/EyeViora/banners/Banner1.png' %}" alt="EyeViora — chăm sóc thị lực toàn diện" width="2172" height="724" fetchpriority="high">
+                </article>
+                <article class="ev-slide" aria-hidden="true" aria-roledescription="slide" aria-label="2 trên 3">
+                    <img class="ev-banner-image" src="{% static 'core/img/EyeViora/banners/Banner2.png' %}" alt="EyeViora — chăm sóc đôi mắt sáng khỏe mỗi ngày" width="2048" height="682" loading="lazy">
+                </article>
+                <article class="ev-slide" aria-hidden="true" aria-roledescription="slide" aria-label="3 trên 3">
+                    <img class="ev-banner-image" src="{% static 'core/img/EyeViora/banners/Banner3.png' %}" alt="EyeViora — chăm sóc đôi mắt cho cả gia đình" width="2048" height="682" loading="lazy">
+                </article>
+                <div class="ev-slider-controls" aria-label="Điều khiển banner">
+                    <button class="ev-slider-arrow" type="button" data-slide-prev aria-label="Banner trước">←</button>
+                    <button class="ev-slider-dot" type="button" aria-label="Tới banner 1" aria-current="true"></button>
+                    <button class="ev-slider-dot" type="button" aria-label="Tới banner 2" aria-current="false"></button>
+                    <button class="ev-slider-dot" type="button" aria-label="Tới banner 3" aria-current="false"></button>
+                    <button class="ev-slider-arrow" type="button" data-slide-next aria-label="Banner tiếp theo">→</button>
+                </div>
+            </div>
+        </section>
+
+        <form class="ev-quick-book ev-form" id="quick-booking-form" action="{% url 'dat_lich_picker' %}" method="get">
+            <div class="ev-quick-field"><label for="quick-branch">Chi nhánh</label><select id="quick-branch" name="chi_nhanh" required><option value="">Chọn chi nhánh</option>{% for branch in quick_branches %}<option value="{{ branch.pk }}">{{ branch.ten }}</option>{% endfor %}</select></div>
+            <div class="ev-quick-field"><label>Dịch vụ khám <span class="ev-muted">(có thể chọn nhiều)</span></label>
+                <details class="ev-service-picker" id="quick-service-picker">
+                    <summary><span data-selected-services-label>Chọn dịch vụ</span><span aria-hidden="true">⌄</span></summary>
+                    <div class="ev-service-picker-options" role="group" aria-label="Chọn nhiều dịch vụ">
+                        {% for service in clinic_services %}<label class="ev-service-picker-option" data-service-option data-branches="{% for branch in service.booking_branches %}{{ branch.pk }}{% if not forloop.last %},{% endif %}{% endfor %}"><input type="checkbox" name="dich_vu_dat_truoc_nhieu" value="{{ service.pk }}" disabled><span>{{ service.ten }}<small>{{ service.don_gia|floatformat:'0g' }} VND</small></span></label>{% endfor %}
+                    </div>
+                </details>
+                <span class="ev-form-error" data-service-error role="alert" hidden>Chọn ít nhất một dịch vụ phù hợp với chi nhánh.</span>
+            </div>
+            <div class="ev-quick-field"><label for="quick-date">Ngày dự kiến khám</label><input id="quick-date" type="date" name="ngay_kham" min="{{ today|date:'Y-m-d' }}" required></div>
+            <button class="ev-button ev-button-primary ev-quick-submit" type="submit">Tiếp tục <span aria-hidden="true">→</span></button>
+            <p class="ev-filter-note">Chọn bác sĩ và giờ ở bước tiếp theo. Không thu tiền khi đặt lịch.</p>
+        </form>
+
+        {% if doctor_info %}
+        <section class="ev-section-tight"><div class="ev-wrap"><p class="ev-kicker">Dành cho bác sĩ</p><h2 class="ev-page-title">Lịch khám hôm nay</h2>{% if doctor_today %}<div class="ev-grid ev-service-grid" style="margin-top:22px">{% for lich in doctor_today %}<article class="ev-service-card"><h3>{{ lich.benh_nhan.ho_ten }}</h3><p>{{ lich.gio_kham|time:"H:i" }} · {{ lich.ca_label }} · {{ lich.get_trang_thai_display }}</p><a class="ev-button ev-button-outline" href="{% url 'doctor_exam' lich.id %}">Mở phiếu khám</a></article>{% endfor %}</div>{% else %}<p class="ev-muted">Hôm nay chưa có lịch khám.</p>{% endif %}</div></section>
+        {% endif %}
+
+        <section class="ev-section-tight ev-tint" id="cham-soc-mat"><div class="ev-wrap">
+            <div class="ev-section-heading"><p class="ev-kicker">Chăm sóc thị lực</p><h2>Quan tâm đôi mắt ở từng giai đoạn</h2><p>Các nhóm chủ đề dưới đây giúp bạn tìm đúng hướng chăm sóc; bác sĩ sẽ tư vấn phù hợp trong buổi khám.</p></div>
+            <div class="ev-grid ev-care-grid">
+                <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/services/01_kham_mat_tong_quat.jpg' %}" alt="Khám mắt tổng quát" width="501" height="327" loading="lazy"><div class="ev-care-copy"><h3>Khám mắt tổng quát</h3><p>Kiểm tra thị lực và trao đổi những thay đổi bạn nhận thấy.</p></div></article>
+                <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/services/02_tat_khuc_xa.jpg' %}" alt="Đo tật khúc xạ" width="497" height="327" loading="lazy"><div class="ev-care-copy"><h3>Cận thị, viễn thị và loạn thị</h3><p>Theo dõi khả năng nhìn gần, nhìn xa và nhu cầu điều chỉnh thị lực.</p></div></article>
+                <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/services/03_kho_mat_moi_mat.jpg' %}" alt="Chăm sóc khô mắt và mỏi mắt" width="506" height="327" loading="lazy"><div class="ev-care-copy"><h3>Khô mắt và mỏi mắt</h3><p>Chia sẻ thời gian sử dụng màn hình và cảm giác khó chịu ở mắt.</p></div></article>
+                <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/services/04_do_nhan_ap.jpg' %}" alt="Đo nhãn áp" width="501" height="326" loading="lazy"><div class="ev-care-copy"><h3>Nhãn áp và glôcôm</h3><p>Trao đổi với bác sĩ về tầm soát và các yếu tố nguy cơ phù hợp.</p></div></article>
+                <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/services/05_day_mat_vong_mac.jpg' %}" alt="Khám đáy mắt và võng mạc" width="497" height="326" loading="lazy"><div class="ev-care-copy"><h3>Đáy mắt và võng mạc</h3><p>Thăm khám chuyên sâu khi có chỉ định hoặc nhu cầu theo dõi.</p></div></article>
+                <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/services/06_cham_soc_mat_tre_em.jpg' %}" alt="Chăm sóc mắt trẻ em" width="506" height="326" loading="lazy"><div class="ev-care-copy"><h3>Chăm sóc mắt trẻ em</h3><p>Khuyến khích kiểm tra thị lực theo tư vấn của chuyên viên y tế.</p></div></article>
+            </div>
+        </div></section>
+
+        <section class="ev-section ev-branch-section" id="chi-nhanh"><div class="ev-wrap">
+            <div class="ev-section-heading"><p class="ev-kicker">9 chi nhánh EyeViora tại TP.HCM</p><h2>Tìm phòng khám gần bạn</h2><p>Tìm theo tên hoặc địa chỉ, chọn khu vực, rồi mở bản đồ để xem đường đi và đặt lịch.</p></div>
+            <form method="get" action="{% url 'home' %}#chi-nhanh" id="geo-form" class="ev-branch-filters">
+                <input type="hidden" id="lat" name="lat" value="{{ user_lat|default:'' }}"><input type="hidden" id="lon" name="lon" value="{{ user_lon|default:'' }}">
+                <div class="ev-branch-filter-field ev-branch-search"><label for="q">Tên hoặc địa chỉ</label><input id="q" name="q" type="search" placeholder="Tìm chi nhánh" value="{{ q|default:'' }}"></div>
+                <div class="ev-branch-filter-field"><label for="phuong">Khu vực</label><select id="phuong" name="phuong"><option value="">Tất cả khu vực</option>{% for ward in all_phuong %}<option value="{{ ward }}" {% if phuong_filter == ward %}selected{% endif %}>{{ ward }}</option>{% endfor %}</select></div>
+                <div class="ev-branch-filter-field"><label for="radius">Bán kính gần tôi</label><select id="radius" name="radius"><option value="5" {% if radius_km == 5 %}selected{% endif %}>5 km</option><option value="10" {% if radius_km == 10 or not radius_km %}selected{% endif %}>10 km</option><option value="20" {% if radius_km == 20 %}selected{% endif %}>20 km</option><option value="40" {% if radius_km == 40 %}selected{% endif %}>40 km</option></select></div>
+                {% if has_reliable_branch_hours %}<label class="ev-open-filter"><input type="checkbox" name="open" value="1" {% if filter_open %}checked{% endif %}> Đang mở cửa</label>{% endif %}
+                <div class="ev-branch-filter-actions"><button class="ev-button ev-button-primary" type="submit">Lọc</button><button class="ev-button ev-button-outline" id="locate-btn" type="button" {% if not map_data %}disabled{% endif %}>Lấy vị trí</button><a class="ev-button ev-button-outline" href="{% url 'home' %}#chi-nhanh">Xóa lọc</a></div>
+                <p class="ev-map-note" id="location-note" aria-live="polite">Vị trí chỉ được dùng sau khi bạn chọn “Lấy vị trí” và cấp quyền cho trình duyệt.</p>
+            </form>
+            <div class="ev-map-layout">
+                <aside class="ev-map-side"><div class="ev-branch-list-heading"><h3>Chi nhánh phù hợp</h3><span>{{ total_bvs }} địa điểm</span></div>
+                    <div class="ev-branch-list" aria-label="Danh sách chi nhánh">
+                        {% for bv in bvs %}<article class="ev-branch-item" data-branch-card data-branch-id="{{ bv.id }}">
+                            <img class="ev-branch-thumb" src="{{ branch_image_url }}" alt="Ảnh minh họa chung phòng khám mắt" width="1024" height="1024" loading="lazy">
+                            <div class="ev-branch-item-copy"><button class="ev-branch-focus" type="button" data-branch-focus><strong>Phòng khám mắt EyeViora — {{ bv.ten }}</strong></button><p>{{ bv.dia_chi }}</p><span class="ev-branch-status">{% if bv.dang_hoat_dong %}Đang hoạt động{% endif %}{% if bv.has_reliable_hours %} · {% if bv.is_open %}Đang mở cửa{% else %}Đóng cửa{% endif %}{% endif %}</span><small class="ev-branch-image-caption">Ảnh minh họa chung</small><div class="ev-branch-links"><a href="{% url 'branch_detail' bv.pk %}">Chi tiết</a><a class="ev-branch-book" href="{% url 'dat_lich_picker' %}?chi_nhanh={{ bv.pk }}">Đặt lịch khám</a></div></div>
+                        </article>{% empty %}<p class="ev-muted ev-branch-empty">Không có chi nhánh phù hợp với bộ lọc.</p>{% endfor %}
+                    </div>
+                </aside>
+                <div class="ev-map-box"><div id="home-map" aria-label="Bản đồ vị trí chi nhánh EyeViora"></div></div>
+            </div>
+        </div></section>
+
+        <section class="ev-section-tight ev-tint"><div class="ev-wrap"><div class="ev-section-heading"><p class="ev-kicker">Trải nghiệm EyeViora</p><h2>Một hành trình chăm sóc rõ ràng</h2></div><div class="ev-grid ev-benefit-grid">
+            <article class="ev-benefit"><span class="ev-benefit-icon" aria-hidden="true">◷</span><h3>Đặt lịch trực tuyến</h3><p>Chọn chi nhánh, nhiều dịch vụ, bác sĩ và khung giờ còn trống.</p></article>
+            <article class="ev-benefit"><span class="ev-benefit-icon" aria-hidden="true">⌖</span><h3>Tìm chi nhánh với GIS</h3><p>Xem vị trí chi nhánh trên bản đồ và chủ động tìm tuyến đường.</p></article>
+            <article class="ev-benefit"><span class="ev-benefit-icon" aria-hidden="true">▤</span><h3>Theo dõi hồ sơ khám</h3><p>Xem lịch khám và thông tin hồ sơ qua tài khoản của bạn.</p></article>
+            <article class="ev-benefit"><span class="ev-benefit-icon" aria-hidden="true">₫</span><h3>Chi phí minh bạch</h3><p>Giá tham khảo từ danh mục; thanh toán sau khi khám hoàn tất.</p></article>
+        </div></div></section>
+
+        <section class="ev-section"><div class="ev-wrap"><div class="ev-cta"><div class="ev-cta-copy"><p class="ev-kicker ev-kicker-light">Bắt đầu từ hôm nay</p><h2>Đồng hành cùng đôi mắt khỏe mạnh</h2><p>Chọn dịch vụ và chi nhánh phù hợp để bắt đầu đặt lịch.</p></div><div class="ev-cta-actions"><a class="ev-button ev-button-light" href="{% url 'dat_lich_picker' %}">Đặt lịch khám <span aria-hidden="true">↗</span></a><a class="ev-button ev-cta-outline" href="#chi-nhanh">Tìm chi nhánh</a></div></div></div></section>
+
+        <section class="ev-section-tight ev-tint" id="kien-thuc"><div class="ev-wrap"><div class="ev-section-heading"><p class="ev-kicker">Kiến thức chăm sóc mắt</p><h2>Thói quen nhỏ, đôi mắt dễ chịu hơn</h2><p>Thông tin tham khảo chung; hãy trao đổi với bác sĩ nếu bạn có triệu chứng hoặc cần tư vấn cá nhân.</p></div><div class="ev-grid ev-care-grid">
+            <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/articles/07_nghi_mat_khi_dung_may_tinh.jpg' %}" alt="Nghỉ mắt sau khi sử dụng máy tính" width="501" height="328" loading="lazy"><div class="ev-care-copy"><h3>Chăm sóc mắt khi dùng máy tính</h3><p>Nghỉ mắt định kỳ, điều chỉnh ánh sáng và khoảng cách màn hình để giảm cảm giác mỏi.</p></div></article>
+            <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/articles/08_doc_sach_dung_anh_sang.jpg' %}" alt="Đọc sách với ánh sáng phù hợp" width="497" height="328" loading="lazy"><div class="ev-care-copy"><h3>Đọc sách và ánh sáng phù hợp</h3><p>Giữ khoảng cách thoải mái, chọn nơi đủ sáng và dành thời gian nghỉ giữa các lượt đọc.</p></div></article>
+            <article class="ev-care-card"><img class="ev-care-image" src="{% static 'core/img/EyeViora/articles/09_cham_soc_mat_nguoi_cao_tuoi.jpg' %}" alt="Chăm sóc mắt người cao tuổi" width="506" height="328" loading="lazy"><div class="ev-care-copy"><h3>Chăm sóc thị lực người cao tuổi</h3><p>Chú ý thay đổi thị lực và trao đổi với nhân viên y tế về lịch kiểm tra phù hợp.</p></div></article>
+        </div></div></section>
+    </main>
+    {% include 'core/public_footer.html' %}
+    {{ map_data|json_script:"map-data" }}
+    {{ home_map_options|json_script:"home-map-options" }}
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    <script src="{% static 'core/js/public.js' %}" defer></script>
+    <script src="{% static 'core/js/home_map.js' %}" defer></script>
+</body>
+</html>

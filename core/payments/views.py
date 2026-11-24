@@ -1,0 +1,322 @@
+from functools import wraps
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
+from django.db import DatabaseError
+from django.db.models import Q, Exists, OuterRef
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_variables
+from django.views.decorators.http import require_GET, require_POST
+
+from core.models import BenhNhan, EmailPhieuThanhToan, GiaoDichThanhToan, HoaDon, LichKham, LogHeThong, PhieuKham
+from core.billing.services import BillingError, bill_exam, validate_invoice_total, payable_error
+from core.billing.services import invoice_lock_reason
+from core.exam_services.services import ExamServiceError, form_context as exam_services_context, sync_services
+from . import services, vnpay
+from . import state as payment_state
+from .access import can_admin, is_receptionist, scoped_appointments
+from core.receipts.delivery import ERROR_MESSAGES, eligible
+
+
+def collector_required(view):
+    @login_required
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if kwargs.get('monitor'):
+            allowed = can_admin(request.user)
+        else:
+            allowed = services.can_collect(request.user)
+        if not allowed:
+            raise PermissionDenied('Cần quyền thu tiền tại quầy hoặc quyền Admin giám sát.')
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
+def admin_required(view):
+    @login_required
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not can_admin(request.user):
+            raise PermissionDenied('Chi Admin giam sat moi duoc thuc hien thao tac nay.')
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
+@never_cache
+@collector_required
+@require_GET
+def payment_list(request, monitor=False):
+    appointments = scoped_appointments(request.user).filter(trang_thai='xong', phieu_kham__isnull=False).select_related(
+        'benh_nhan', 'bac_si__chi_nhanh', 'hoa_don'
+    ).prefetch_related('hoa_don__giao_dichs').annotate(
+        payment_pending=Exists(GiaoDichThanhToan.objects.filter(hoa_don__lich_kham_id=OuterRef('pk'), trang_thai__in=['pending', 'timeout'])),
+        payment_failed=Exists(GiaoDichThanhToan.objects.filter(hoa_don__lich_kham_id=OuterRef('pk'), trang_thai__in=payment_state.RELEASABLE)),
+        payment_refund=Exists(GiaoDichThanhToan.objects.filter(hoa_don__lich_kham_id=OuterRef('pk'), trang_thai='duplicate')),
+    ).order_by('-ngay_kham', '-pk')
+    query = request.GET.get('q', '').strip()[:100]
+    if query:
+        search = Q(benh_nhan__ho_ten__icontains=query) | Q(benh_nhan__so_dien_thoai__icontains=query)
+        if query.isascii() and query.isdigit() and len(query) <= 10:
+            search |= Q(hoa_don__pk=int(query)) | Q(pk=int(query))
+        appointments = appointments.filter(search)
+    status = request.GET.get('status', '')
+    filters = {
+        'paid': Q(hoa_don__trang_thai='paid', hoa_don__can_doi_soat=False),
+        'reconcile': Q(hoa_don__can_doi_soat=True),
+        'pending': Q(payment_pending=True, hoa_don__can_doi_soat=False),
+        'unpaid': Q(hoa_don__trang_thai='unpaid', payment_pending=False, hoa_don__can_doi_soat=False),
+        'no_invoice': Q(hoa_don__isnull=True),
+        'failed': Q(hoa_don__trang_thai='unpaid', payment_pending=False, payment_failed=True, hoa_don__can_doi_soat=False),
+    }
+    if status in filters:
+        appointments = appointments.filter(filters[status])
+    page = Paginator(appointments, 30).get_page(request.GET.get('page'))
+    return render(request, 'core/payments/list.html', {'page_obj': page, 'q': query, 'status': status,
+        'profile': getattr(request.user, 'le_tan_chi_nhanh', None), 'monitor': monitor,
+        'detail_route': 'cashier_monitor_detail' if monitor else 'payment_detail',
+        'show_technical': can_admin(request.user)})
+
+
+@never_cache
+@collector_required
+@require_GET
+def payment_detail(request, lich_id, monitor=False):
+    appointment = get_object_or_404(scoped_appointments(request.user).select_related('benh_nhan', 'bac_si__chi_nhanh'), pk=lich_id)
+    invoice = HoaDon.objects.filter(lich_kham=appointment).first()
+    phieu = PhieuKham.objects.filter(lich_kham=appointment, benh_nhan=appointment.benh_nhan).first()
+    attempts = list(invoice.giao_dichs.select_related('nguoi_tao', 'chi_nhanh')) if invoice else []
+    try:
+        services.require_completed(appointment)
+        completion_error = ''
+    except vnpay.PaymentError as exc:
+        completion_error = str(exc)
+    now = timezone.now()
+    counter_arrived = not is_receptionist(request.user) or appointment.trang_thai_tiep_nhan == 'da_tiep_nhan'
+    pending = any(attempt.trang_thai in ('pending', 'timeout')
+                  for attempt in attempts)
+    overdue_pending = any(attempt.trang_thai == 'timeout' or (
+        attempt.trang_thai == 'pending' and payment_state.grace_deadline(attempt) is not None
+        and now >= payment_state.grace_deadline(attempt)) for attempt in attempts)
+    refund_attempt = next((attempt for attempt in attempts
+                           if attempt.trang_thai == GiaoDichThanhToan.TrangThai.THU_TRUNG), None)
+    config_error = vnpay.configuration_error()
+    invoice_error = ''
+    if invoice:
+        try:
+            validate_invoice_total(invoice)
+        except BillingError as exc:
+            invoice_error = ' '.join(exc.messages)
+    amount_error = payable_error(invoice) if invoice else ''
+    email_row = EmailPhieuThanhToan.objects.filter(hoa_don=invoice).first() if invoice else None
+    available = bool(invoice and invoice.trang_thai == 'unpaid' and not invoice.can_doi_soat
+                     and not payment_state.any_blocking(attempts, now)
+                     and not completion_error and not invoice_error and not monitor and counter_arrived)
+    doctor_confirmed_services = bool(phieu and phieu.dich_vu_thuc_hien.filter(
+        da_huy=False, da_xac_nhan_bac_si=True,
+    ).exists())
+    can_edit_services = bool(
+        phieu and not monitor and services.can_collect(request.user)
+        and not doctor_confirmed_services and not is_receptionist(request.user)
+        and (not invoice or not invoice_lock_reason(invoice))
+    )
+    service_context = exam_services_context(appointment, phieu) if can_edit_services else {}
+    show_technical = can_admin(request.user)
+    audit_entries = []
+    service_logs = []
+    if phieu:
+        service_logs = list(
+            LogHeThong.objects.filter(model_name='DichVuThucHien').filter(
+                Q(du_lieu_moi__phieu_kham_id=phieu.pk)
+                | Q(du_lieu_cu__phieu_kham_id=phieu.pk)
+            ).select_related('nguoi_thuc_hien').order_by('-thoi_gian', '-pk')[:50]
+        )
+        for log in service_logs:
+            data = log.du_lieu_moi or log.du_lieu_cu or {}
+            log.service_label = data.get('ten_dich_vu') or data.get('ma_dich_vu', 'Dịch vụ')
+            log.quantity_before = (log.du_lieu_cu or {}).get('so_luong')
+            log.quantity_after = (log.du_lieu_moi or {}).get('so_luong')
+    if invoice:
+        audit_entries = list(
+            LogHeThong.objects.filter(
+                Q(model_name='HoaDon', object_id=invoice.pk)
+                | Q(model_name='GiaoDichThanhToan', object_id__in=[attempt.pk for attempt in attempts])
+            ).exclude(model_name='HoaDon', du_lieu_moi__phien_ban__isnull=False)
+            .select_related('nguoi_thuc_hien').order_by('-thoi_gian', '-pk')[:50]
+        )
+    return render(request, 'core/payments/detail.html', {
+        'receipt_email': email_row,
+        'receipt_email_error': ERROR_MESSAGES.get(email_row.ma_loi, '') if email_row else '',
+        'can_retry_email': bool(invoice and eligible(invoice) and
+                               (not email_row or email_row.trang_thai in ['pending', 'failed', 'skipped'])),
+        'monitor': monitor, 'list_route': 'cashier_monitor' if monitor else 'payment_list',
+        'detail_route': 'cashier_monitor_detail' if monitor else 'payment_detail',
+        'can_open_collection': bool(monitor and invoice and invoice.trang_thai == 'unpaid'
+                                    and services.can_collect(request.user)),
+        'collector_access': services.can_collect(request.user),
+        'can_cash': available and invoice.so_tien > 0,
+        'counter_waiting': bool(is_receptionist(request.user) and invoice and not counter_arrived),
+        'can_view_receipt': bool(invoice and (not is_receptionist(request.user)
+            or (invoice.trang_thai == 'paid' and not invoice.can_doi_soat))),
+        'lich': appointment, 'invoice': invoice, 'attempts': attempts,
+        'completion_error': completion_error, 'pending': pending, 'overdue_pending': overdue_pending, 'invoice_error': invoice_error,
+        'amount_error': amount_error,
+        'refund_attempt': refund_attempt, 'refund_required': bool(refund_attempt),
+        'invoice_lines': list(invoice.chi_tiet_hien_hanh) if invoice else [],
+        'invoice_logs': (LogHeThong.objects.filter(model_name='HoaDon', object_id=invoice.pk,
+                                                  du_lieu_moi__phien_ban__isnull=False)
+                         .select_related('nguoi_thuc_hien') if invoice else []),
+        'service_logs': service_logs,
+        'audit_entries': audit_entries,
+        'config_error': (config_error if show_technical else ('Cổng thanh toán hiện chưa sẵn sàng. Vui lòng liên hệ Admin.' if config_error else '')),
+        'can_start': available and not config_error and not amount_error,
+        'can_edit_services': can_edit_services,
+        'can_resolve_reconciliation': bool(monitor and invoice and (invoice.can_doi_soat or overdue_pending)
+                                           and not refund_attempt and can_admin(request.user)),
+        'show_technical': show_technical,
+        'service_phieu': phieu,
+        **service_context,
+        'ipn_url': vnpay.callback_url('vnpay_ipn') if show_technical and not config_error else '',
+        'return_url': vnpay.callback_url('vnpay_return') if show_technical and not config_error else '',
+    })
+
+
+@never_cache
+@collector_required
+@require_POST
+def services_save(request, lich_id):
+    if is_receptionist(request.user):
+        raise PermissionDenied('Lễ tân chỉ được thu tiền; dịch vụ chuyên môn do bác sĩ xác nhận.')
+    appointment = get_object_or_404(scoped_appointments(request.user).select_related('benh_nhan', 'bac_si__chi_nhanh'), pk=lich_id)
+    phieu = get_object_or_404(PhieuKham, lich_kham=appointment, benh_nhan=appointment.benh_nhan)
+    context = exam_services_context(appointment, phieu, request.POST)
+    try:
+        sync_services(phieu, request.user, context['services_formset'], context['services_revision'],
+                      request.META.get('REMOTE_ADDR', ''))
+        messages.success(request, 'Đã lưu dịch vụ và cập nhật hóa đơn.')
+    except ExamServiceError as exc:
+        messages.error(request, ' '.join(exc.messages))
+    except PermissionDenied as exc:
+        messages.error(request, str(exc))
+    return redirect('payment_detail', lich_id=lich_id)
+
+
+@collector_required
+@require_POST
+def invoice_create(request, lich_id):
+    if is_receptionist(request.user):
+        raise PermissionDenied('Lễ tân không được tạo hoặc tính lại hóa đơn.')
+    get_object_or_404(scoped_appointments(request.user), pk=lich_id)
+    phieu = get_object_or_404(PhieuKham, lich_kham_id=lich_id)
+    try:
+        # Recovery for completed older exams with services and no invoice.
+        # This endpoint never accepts a browser-supplied amount or reprices an invoice.
+        invoice = bill_exam(phieu.pk, request.user, remote_addr=request.META.get('REMOTE_ADDR', ''))
+        messages.success(request, f'Hóa đơn #{invoice.pk} đã được lưu; số tiền lấy từ dữ liệu đã chốt.')
+    except BillingError as exc:
+        messages.error(request, ' '.join(exc.messages))
+    return redirect('payment_detail', lich_id=lich_id)
+
+
+@never_cache
+@collector_required
+@require_POST
+def payment_start(request, invoice_id):
+    invoice = get_object_or_404(HoaDon.objects.filter(lich_kham__in=scoped_appointments(request.user)), pk=invoice_id)
+    try:
+        # Do not trust client-supplied amount or arbitrary forwarding headers.
+        _, url = services.start_payment(invoice.pk, request.user, request.META.get('REMOTE_ADDR', ''))
+    except vnpay.PaymentError as exc:
+        messages.error(request, str(exc))
+        return redirect('payment_detail', lich_id=invoice.lich_kham_id)
+    return redirect(url)
+
+
+@never_cache
+@collector_required
+@require_POST
+def payment_cash(request, invoice_id):
+    invoice = get_object_or_404(HoaDon.objects.filter(lich_kham__in=scoped_appointments(request.user)), pk=invoice_id)
+    try:
+        if request.POST.get('received_full') != 'yes':
+            raise vnpay.PaymentError('Cần xác nhận đã nhận đủ toàn bộ số tiền trên hóa đơn.')
+        services.collect_cash(invoice.pk, request.user, expected_version=request.POST.get('version'))
+        messages.success(request, 'Đã ghi nhận thanh toán toàn bộ bằng tiền mặt.')
+    except vnpay.PaymentError as exc:
+        messages.error(request, str(exc))
+    return redirect('payment_detail', lich_id=invoice.lich_kham_id)
+
+
+@never_cache
+@admin_required
+@require_POST
+def reconciliation_close(request, invoice_id):
+    invoice = get_object_or_404(HoaDon, pk=invoice_id)
+    try:
+        outcome = services.resolve_reconciliation(
+            invoice.pk, request.user,
+            reason=request.POST.get('reason', ''),
+            reference=request.POST.get('reference', ''),
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        if outcome == 'settled':
+            messages.success(request, 'VNPAY xác nhận đã thu tiền: hệ thống đã ghi nhận thanh toán, hóa đơn vẫn khóa để không thu thêm.')
+        elif outcome == 'duplicate':
+            messages.warning(request, 'VNPAY xác nhận đã thu tiền trong khi hóa đơn đã thanh toán bằng nguồn khác: ghi nhận thu trùng, cần hoàn tiền. Hóa đơn vẫn khóa.')
+        elif outcome == 'paid':
+            messages.success(request, 'VNPAY xác nhận chưa thanh toán. Hóa đơn đã thanh toán bằng nguồn khác nên vẫn khóa; đã gỡ cờ đối soát.')
+        else:
+            messages.success(request, 'VNPAY xác nhận chưa thanh toán. Đã kết thúc đối soát và mở lại hóa đơn để thu tiền.')
+    except vnpay.PaymentError as exc:
+        messages.error(request, str(exc))
+    return redirect('cashier_monitor_detail', lich_id=invoice.lich_kham_id)
+
+
+@never_cache
+@require_GET
+@sensitive_variables()
+def vnpay_ipn(request):
+    try:
+        params = vnpay.verified_params(request.GET)
+    except vnpay.PaymentError:
+        return JsonResponse({'RspCode': '97', 'Message': 'Invalid Signature'})
+    try:
+        code, message = services.process_ipn(params)
+    except DatabaseError:
+        # Rollback happens in the service; never acknowledge a failed commit.
+        code, message = '99', 'Database unavailable; retry notification'
+    return JsonResponse({'RspCode': code, 'Message': message})
+
+
+@never_cache
+@require_GET
+@sensitive_variables()
+def vnpay_return(request):
+    # Public signed return displays only a reference/status, never patient data.
+    # No write, even for a successful, authentic return received before IPN.
+    context = {}
+    try:
+        params = vnpay.verified_params(request.GET)
+        attempt = GiaoDichThanhToan.objects.filter(ma_tham_chieu=params.get('vnp_TxnRef', ''), phuong_thuc='VNPAY').first()
+        if attempt is None or services.validate_callback(params, attempt):
+            raise vnpay.PaymentError('Invalid result')
+        can_collect_invoice = bool(
+            request.user.is_authenticated and services.can_collect(request.user)
+            and scoped_appointments(request.user).filter(pk=attempt.hoa_don.lich_kham_id).exists()
+        )
+        return_url, return_label = reverse('home'), 'Về trang chủ'
+        if can_collect_invoice:
+            return_url, return_label = reverse('payment_detail', args=[attempt.hoa_don.lich_kham_id]), 'Về chi tiết hóa đơn'
+        elif request.user.is_authenticated and BenhNhan.objects.filter(user=request.user).exists():
+            return_url, return_label = reverse('upcoming_appointments'), 'Về lịch khám của tôi'
+        context = {'attempt': attempt, 'can_collect': can_collect_invoice,
+                   'return_url': return_url, 'return_label': return_label}
+    except vnpay.PaymentError:
+        context['error'] = 'Không xác minh được thông tin trả về. Vui lòng nhờ nhân viên kiểm tra hóa đơn.'
+    return render(request, 'core/payments/return.html', context, status=400 if context.get('error') else 200)

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S&#7917;a phi&#7871;u kh&#225;m</title>
+    <style>
+
+        :root {
+            --bg-1: #f6f3ee;
+            --bg-2: #eef4f0;
+            --ink: #1f2a2b;
+            --muted: #5b6b6a;
+            --primary: #0b6b5b;
+            --card: #ffffff;
+            --shadow: 0 18px 50px rgba(25, 35, 34, 0.12);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: var(--ev-font, "Segoe UI", Arial, sans-serif);
+            color: var(--ink);
+            background:
+                radial-gradient(1200px 600px at 85% -10%, rgba(15, 138, 116, 0.16), transparent 60%),
+                radial-gradient(900px 500px at -10% 20%, rgba(242, 197, 124, 0.18), transparent 60%),
+                linear-gradient(120deg, var(--bg-1), var(--bg-2));
+            min-height: 100vh;
+        }
+
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 22px;
+            border-radius: 20px;
+            border: 1px solid rgba(31, 42, 43, 0.08);
+            box-shadow: var(--shadow);
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .field label {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .field textarea {
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(31, 42, 43, 0.18);
+            font-family: inherit;
+            font-size: 14px;
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .field input[type="file"] {
+            padding: 8px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(31, 42, 43, 0.18);
+            background: #fff;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .image-item {
+            border: 1px solid rgba(31, 42, 43, 0.12);
+            border-radius: 12px;
+            padding: 8px;
+            background: #fff;
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .alert-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .alert {
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+
+        .alert.error {
+            background: #fff1f1;
+            border-color: #ffc8c8;
+            color: #9f2d2d;
+        }
+
+        .alert.success {
+            background: #eefaf4;
+            border-color: #bfe9cf;
+            color: #176b3a;
+        }
+
+        .alert.info {
+            background: #eef6ff;
+            border-color: #bfd8ff;
+            color: #1d4b8f;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .btn.primary {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 10px 18px rgba(11, 107, 91, 0.25);
+        }
+
+        .btn.ghost {
+            color: var(--primary);
+            border-color: rgba(11, 107, 91, 0.3);
+            background: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+    <link rel="stylesheet" href="{% static 'core/css/doctor.css' %}">
+</head>
+<body class="doctor-workspace">
+    {% include 'core/doctor_sidebar.html' %}
+    <div class="page">
+        <div class="card">
+            <header class="doctor-page-heading">
+                <div><h1>Phi&#7871;u kh&#225;m &#273;ang th&#7921;c hi&#7879;n</h1><p>L&#7883;ch #{{ phieu.lich_kham_id }} · {{ phieu.lich_kham.bac_si.chi_nhanh.ten }}</p></div>
+                <a class="btn ghost" href="{% url 'bac_si_home' %}">V&#7873; danh s&#225;ch l&#7883;ch</a>
+            </header>
+            <section class="doctor-patient-banner" aria-label="Thông tin bệnh nhân">
+                <div><h2>{{ phieu.benh_nhan.ho_ten }}</h2><p>{{ phieu.lich_kham.ngay_kham|date:"d/m/Y" }} · {{ phieu.lich_kham.gio_kham|time:"H:i" }} · {{ phieu.benh_nhan.get_gioi_tinh_display }} · Ng&#224;y sinh {{ phieu.benh_nhan.ngay_sinh|date:"d/m/Y" }}</p></div>
+                <span class="doctor-status">&#272;ang kh&#225;m</span>
+                <p>Chi nh&#225;nh: {{ phieu.lich_kham.bac_si.chi_nhanh.ten }}</p>
+            </section>
+            <p style="color:var(--muted);">
+                B&#7879;nh nh&#226;n: <strong>{{ phieu.benh_nhan.ho_ten }}</strong> &#8212;
+                Ng&#224;y {{ phieu.lich_kham.ngay_kham|date:"d/m/Y" }} l&#250;c {{ phieu.lich_kham.gio_kham|time:"H\hi" }}
+                ({% with h=phieu.lich_kham.gio_kham|time:"H" %}{% if h < "12" %}s&#225;ng{% elif h < "18" %}chi&#7873;u{% else %}t&#7889;i{% endif %}{% endwith %})
+            </p>
+
+            {% if messages %}
+                <div class="alert-list">
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="field">
+                    <h2 class="doctor-section-heading">Ghi nh&#7853;n k&#7871;t qu&#7843; kh&#225;m</h2>
+                    <label>Tri&#7879;u ch&#7913;ng</label>
+                    <textarea name="trieu_chung">{{ trieu_chung_value }}</textarea>
+                </div>
+
+                <div class="field">
+                    <label>Ch&#7849;n &#273;o&#225;n</label>
+                    <textarea name="chan_doan">{{ chan_doan_value }}</textarea>
+                </div>
+
+                <div class="field">
+                    <label>H&#432;&#7899;ng &#273;i&#7873;u tr&#7883;</label>
+                    <textarea name="huong_dieu_tri">{{ huong_dieu_tri_value }}</textarea>
+                </div>
+
+                {% include 'core/eye_exam_fields.html' %}
+                {% include 'core/doctor_service_editor.html' %}
+
+                {% if existing_images %}
+                    <div class="field">
+                        <label>&#7842;nh hi&#7879;n t&#7841;i (ch&#7885;n &#273;&#7875; x&#243;a)</label>
+                        <div class="image-grid">
+                            {% for img in existing_images %}
+                                <label class="image-item">
+                                    <img src="{{ img.hinh_anh.url }}" alt="&#7842;nh phi&#7871;u kh&#225;m">
+                                    <input type="checkbox" name="remove_image_ids" value="{{ img.id }}">
+                                    X&#243;a &#7843;nh n&#224;y
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="field">
+                    <label>Th&#234;m &#7843;nh m&#7899;i</label>
+                    <input type="file" name="new_images" accept="image/jpeg,image/png,image/webp" multiple>
+                    <p>Tối đa 10 ảnh/phiếu (gồm ảnh giữ lại), 5 MB/ảnh, 20 MB/lần tải; tối đa 4096 px mỗi chiều và 16 triệu pixel.</p>
+                </div>
+
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <p class="doctor-service-note" style="width:100%; margin:0;">B&#225;c s&#297; x&#225;c nh&#7853;n c&#225;c d&#7883;ch v&#7909; &#273;&#227; th&#7921;c hi&#7879;n. H&#243;a &#273;&#417;n &#273;&#432;&#7907;c t&#7893;ng h&#7907;p sau khi ho&#224;n t&#7845;t kh&#225;m; b&#225;c s&#297; kh&#244;ng thu ti&#7873;n.</p>
+                    {% include 'core/exam_time_exception.html' %}
+                    <button class="btn primary" type="submit" name="action" value="complete">Ho&#224;n th&#224;nh kh&#225;m</button>
+                    <a class="btn ghost" href="{% url 'phieu_kham_detail' phieu.id %}">Quay l&#7841;i</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var form = document.querySelector('form[enctype="multipart/form-data"]');
+            if (!form) return;
+            form.addEventListener('submit', function (event) {
+                if (event.submitter && event.submitter.name === 'action' && event.submitter.value === 'complete' &&
+                    !window.confirm('Ho\u00e0n t\u1ea5t kh\u00e1m s\u1ebd kh\u00f3a ch\u1ec9nh s\u1eeda h\u1ed3 s\u01a1 v\u00e0 t\u1ed5ng h\u1ee3p h\u00f3a \u0111\u01a1n. B\u1ea1n c\u00f3 mu\u1ed1n ti\u1ebfp t\u1ee5c?')) {
+                    event.preventDefault();
+                }
+            });
+        })();
+    </script>
+    <script src="{% static 'core/js/doctor.js' %}" defer></script>
+</body>
+</html>
+
+

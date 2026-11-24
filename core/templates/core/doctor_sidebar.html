@@ -1,0 +1,32 @@
+{% load static %}
+<aside class="doctor-sidebar" id="doctor-sidebar" aria-label="Khu vực bác sĩ">
+    <a class="doctor-brand" href="{% url 'bac_si_home' %}">
+        <img src="{% static 'core/img/EyeViora/logoEyeViora.png' %}" alt="Logo EyeViora" width="44" height="44">
+        <span><strong>EyeViora</strong><small>KHÔNG GIAN BÁC SĨ</small></span>
+    </a>
+    <p class="doctor-nav-label">Làm việc</p>
+    <nav class="doctor-nav">
+        <a href="{% url 'bac_si_home' %}" {% if request.resolver_match.url_name == 'bac_si_home' %}aria-current="page"{% endif %}>
+            <span class="doctor-nav-icon" aria-hidden="true">▦</span><span>Lịch khám</span>
+        </a>
+        <a href="{% url 'bac_si_schedule' %}" {% if request.resolver_match.url_name == 'bac_si_schedule' %}aria-current="page"{% endif %}>
+            <span class="doctor-nav-icon" aria-hidden="true">◷</span><span>Lịch làm việc</span>
+        </a>
+        <a href="{% url 'bac_si_notifications' %}" {% if request.resolver_match.url_name == 'bac_si_notifications' %}aria-current="page"{% endif %}>
+            <span class="doctor-nav-icon" aria-hidden="true">♧</span><span>Thông báo</span>
+        </a>
+        {% if perms.core.view_cross_branch_medical_history %}<a href="{% url 'cross_branch_history' %}" {% if request.resolver_match.url_name == 'cross_branch_history' %}aria-current="page"{% endif %}>
+            <span class="doctor-nav-icon" aria-hidden="true">⌕</span><span>Lịch sử liên chi nhánh</span>
+        </a>{% endif %}
+    </nav>
+    <div class="doctor-sidebar-bottom">
+        {% if request.user.bac_si %}<div class="doctor-identity"><strong>{{ request.user.bac_si.ho_ten }}</strong>{{ request.user.bac_si.chi_nhanh.ten }}</div>{% endif %}
+        <a class="doctor-home-link" href="{% url 'home' %}">← Về trang EyeViora</a>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="doctor-logout" type="submit">Đăng xuất</button></form>
+    </div>
+</aside>
+<div class="doctor-sidebar-scrim" data-doctor-scrim aria-hidden="true"></div>
+<button class="doctor-menu-toggle" type="button" aria-label="Mở điều hướng bác sĩ" aria-expanded="false" aria-controls="doctor-sidebar" data-doctor-menu>
+    <span aria-hidden="true"></span>
+</button>
+<script src="{% static 'core/js/validation_vi.js' %}" defer></script>

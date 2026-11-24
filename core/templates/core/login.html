@@ -1,0 +1,22 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#103452"><title>Đăng nhập | EyeViora</title><link rel="stylesheet" href="{% static 'core/css/public.css' %}"></head>
+<body class="public-page public-auth">
+    {% include 'core/public_header.html' %}
+    <main class="page"><section class="card ev-auth-card">
+        <p class="ev-kicker">Chào mừng trở lại</p><h1>Đăng nhập</h1><p class="ev-muted">Đăng nhập để xem lịch khám và thông tin hồ sơ của bạn.</p>
+        {% if messages %}<div class="ev-grid" style="gap:8px;margin:18px 0">{% for message in messages %}<div class="ev-alert {{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+        <form method="post" class="ev-form">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+            <div class="field"><label for="username">Tên người dùng</label><input id="username" name="username" autocomplete="username" required placeholder="Nhập tên người dùng"></div>
+            <div class="field"><label for="password">Mật khẩu</label><input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Nhập mật khẩu"></div>
+            <button class="ev-button ev-button-primary" type="submit" style="width:100%">Đăng nhập</button>
+        </form>
+        <p class="ev-muted" style="margin:17px 0 0;font-size:13px"><a href="{% url 'forgot_password' %}">Quên mật khẩu?</a></p>
+        <p class="ev-muted" style="margin:8px 0 0;font-size:13px">Chưa có tài khoản? <a href="{% url 'register' %}">Đăng ký</a></p>
+    </section></main>
+    {% include 'core/public_footer.html' %}
+    <script src="{% static 'core/js/public.js' %}" defer></script>
+</body>
+</html>

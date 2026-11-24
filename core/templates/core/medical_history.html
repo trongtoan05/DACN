@@ -1,0 +1,35 @@
+{% extends 'core/patient/base.html' %}
+{% block title %}Lịch sử khám{% endblock %}
+{% block page_title %}Lịch sử khám{% endblock %}
+{% block page_subtitle %}<p>Xem lại các lần khám đã hoàn tất và hồ sơ bác sĩ đã công bố.</p>{% endblock %}
+{% block patient_content %}
+    {% if lich_su %}
+        <div class="patient-grid">
+            {% for item in lich_su %}
+                <article class="patient-card patient-history-card">
+                    <div class="patient-appointment-top"><div><div class="patient-date">{{ item.ngay_kham|date:'d/m/Y' }}</div><h2>{{ item.bac_si.ho_ten|default:'Bác sĩ' }}</h2></div><span class="patient-badge" data-status="xong">Đã khám</span></div>
+                    <dl class="patient-details">
+                        <div><dt>Chi nhánh</dt><dd>{{ item.chi_nhanh.ten|default:'—' }}</dd></div>
+                        <div><dt>Bác sĩ</dt><dd>{{ item.bac_si.ho_ten|default:'—' }}</dd></div>
+                        <div><dt>Triệu chứng</dt><dd>{{ item.trieu_chung|default:'Chưa ghi nhận' }}</dd></div>
+                        <div><dt>Chẩn đoán</dt><dd>{{ item.chan_doan|default:'Chưa ghi nhận' }}</dd></div>
+                    </dl>
+                    {% if item.huong_dieu_tri %}<p><strong>Hướng điều trị:</strong> {{ item.huong_dieu_tri }}</p>{% endif %}
+                    {% if item.phieu_kham and item.phieu_kham.hoa_don %}
+                        <div><span class="patient-badge" data-status="{% if item.phieu_kham.hoa_don.trang_thai == 'paid' %}xong{% else %}cho{% endif %}">{% if item.phieu_kham.hoa_don.trang_thai == 'paid' %}Đã thanh toán{% else %}{{ item.phieu_kham.hoa_don.get_trang_thai_display }}{% endif %}</span></div>
+                    {% elif item.phieu_kham %}<div><span class="patient-badge">Chưa có hóa đơn</span></div>{% endif %}
+                    <div class="patient-actions">
+                        {% if item.phieu_kham %}<a class="patient-button secondary" href="{% url 'phieu_kham_detail' item.phieu_kham.id %}">Xem hồ sơ khám</a>{% endif %}
+                        {% if item.phieu_kham and item.phieu_kham.lich_kham.trang_thai == 'xong' %}<a class="patient-button secondary" href="{% url 'patient_rating' item.phieu_kham.lich_kham_id %}">{% if item.phieu_kham.lich_kham.danh_gia %}Xem đánh giá của bạn{% else %}Đánh giá trải nghiệm{% endif %}</a>{% endif %}
+                        {% if item.phieu_kham.hoa_don and item.phieu_kham.hoa_don.trang_thai == 'paid' and not item.phieu_kham.hoa_don.can_doi_soat %}
+                            <a class="patient-button secondary" href="{% url 'receipt_view' item.phieu_kham.hoa_don.id %}" target="_blank" rel="noopener">Xem chứng từ</a>
+                            <a class="patient-button secondary" href="{% url 'receipt_download' item.phieu_kham.hoa_don.id %}">Tải chứng từ</a>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="patient-empty"><strong>Chưa có lịch sử khám</strong><p>Các lần khám hoàn tất sẽ xuất hiện tại đây khi hồ sơ được bác sĩ công bố.</p><a class="patient-button" href="{% url 'upcoming_appointments' %}">Xem lịch hẹn</a></div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'core/payments/base.html' %}
+{% block content %}
+<section>
+    <h1>Kết quả thanh toán</h1>
+    {% if error %}<p class="notice">{{ error }}</p>{% else %}
+        <p>Mã tham chiếu: <code>{{ attempt.ma_tham_chieu }}</code></p>
+        {% if attempt.trang_thai == 'duplicate' %}
+            <p class="notice">Khoản thanh toán này được VNPAY xác nhận thành công sau khi hóa đơn đã hoàn tất, nên được ghi nhận là <strong>thu trùng</strong>. Không thu thêm tiền; vui lòng liên hệ nhân viên để được hoàn lại.</p>
+        {% elif attempt.trang_thai == 'timeout' %}
+            <p class="notice">Chưa có kết quả xác nhận từ VNPAY (quá hạn chờ IPN). Hóa đơn đang được khóa để tránh thu trùng; vui lòng nhờ nhân viên kiểm tra.</p>
+        {% elif attempt.hoa_don.can_doi_soat %}
+            <p class="notice">Kết quả giao dịch cần đối soát với VNPAY. Đã khóa lần thu mới; vui lòng nhờ nhân viên kiểm tra.</p>
+        {% elif attempt.trang_thai == 'success' %}
+            <p class="notice success">Thanh toán thành công. Hệ thống đã nhận IPN hợp lệ và ghi nhận hóa đơn đã thanh toán.</p>
+        {% elif attempt.hoa_don.trang_thai == 'paid' %}
+            <p class="notice success">Lần VNPAY này: {{ attempt.get_trang_thai_display }}. Hóa đơn đã hoàn tất qua lần thanh toán khác tại quầy. Không thu thêm tiền.</p>
+        {% elif attempt.trang_thai == 'pending' %}
+            <p class="notice">Đang chờ VNPAY xác nhận giao dịch. Trang sẽ tự cập nhật; không thực hiện lần thu mới trong lúc chờ IPN.</p>
+            <p class="muted">Tự kiểm tra lại sau vài giây…</p>
+        {% else %}
+            <p class="notice">{{ attempt.get_trang_thai_display }}. Hóa đơn chưa thanh toán. Nhân viên có thể thực hiện lại tại quầy.</p>
+        {% endif %}
+        <p><a href="">Tải lại trạng thái</a></p>
+        <p><a class="btn secondary" href="{{ return_url }}">{{ return_label }}</a></p>
+        {% if attempt.trang_thai == 'pending' %}
+            <script>window.setTimeout(function () { window.location.reload(); }, 3000);</script>
+        {% endif %}
+    {% endif %}
+    {% if error %}<p><a class="btn secondary" href="{% url 'home' %}">Về trang chủ</a></p>{% endif %}
+</section>
+{% endblock %}

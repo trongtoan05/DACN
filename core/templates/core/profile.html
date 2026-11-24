@@ -1,0 +1,39 @@
+{% extends 'core/patient/base.html' %}
+{% block title %}Hồ sơ cá nhân{% endblock %}
+{% block page_title %}Hồ sơ cá nhân{% endblock %}
+{% block page_subtitle %}<p>Thông tin này giúp phòng khám liên hệ và chuẩn bị cho lịch khám của bạn.</p>{% endblock %}
+{% block patient_content %}
+    <section class="patient-panel" aria-labelledby="personal-title">
+        <div class="patient-section-heading" style="margin-top:0"><h2 id="personal-title">Thông tin cá nhân</h2></div>
+        <form method="post" autocomplete="on">
+            {% csrf_token %}<input type="hidden" name="action" value="update_profile">
+            <div class="patient-form-grid">
+                <div class="patient-field"><label for="patient-name">Họ và tên</label><input id="patient-name" name="ho_ten" type="text" autocomplete="name" required maxlength="255" value="{% if profile_values is not None %}{{ profile_values.ho_ten }}{% else %}{{ bn.ho_ten }}{% endif %}"></div>
+                <div class="patient-field"><label for="patient-phone">Số điện thoại</label><input id="patient-phone" name="so_dien_thoai" type="tel" autocomplete="tel" required maxlength="20" value="{% if profile_values is not None %}{{ profile_values.so_dien_thoai }}{% else %}{{ bn.so_dien_thoai }}{% endif %}"></div>
+                <div class="patient-field"><label for="patient-birth">Ngày sinh</label><input id="patient-birth" name="ngay_sinh" type="date" value="{% if profile_values is not None %}{{ profile_values.ngay_sinh }}{% else %}{{ bn.ngay_sinh|date:'Y-m-d' }}{% endif %}"></div>
+                <div class="patient-field"><label for="patient-gender">Giới tính</label><select id="patient-gender" name="gioi_tinh">
+                    <option value="nam" {% if profile_values.gioi_tinh == 'nam' or profile_values is None and bn.gioi_tinh == 'nam' %}selected{% endif %}>Nam</option>
+                    <option value="nu" {% if profile_values.gioi_tinh == 'nu' or profile_values is None and bn.gioi_tinh == 'nu' %}selected{% endif %}>Nữ</option>
+                    <option value="khac" {% if profile_values.gioi_tinh == 'khac' or profile_values is None and bn.gioi_tinh == 'khac' %}selected{% endif %}>Khác</option>
+                </select></div>
+                <div class="patient-field full"><label for="patient-address">Địa chỉ</label><textarea id="patient-address" name="dia_chi" autocomplete="street-address">{% if profile_values is not None %}{{ profile_values.dia_chi }}{% else %}{{ bn.dia_chi }}{% endif %}</textarea></div>
+            </div>
+            <div class="patient-actions"><button class="patient-button" type="submit">Lưu thông tin</button></div>
+        </form>
+    </section>
+
+    <section class="patient-panel" style="margin-top:18px" aria-labelledby="account-title">
+        <div class="patient-section-heading" style="margin-top:0"><h2 id="account-title">Tài khoản và mật khẩu</h2></div>
+        <div class="patient-field" style="max-width:520px;margin-bottom:20px"><label for="patient-username">Tên đăng nhập</label><input id="patient-username" type="text" value="{{ user.get_username }}" readonly aria-describedby="username-help"><p id="username-help" class="patient-help">Tên đăng nhập không thay đổi khi cập nhật số điện thoại liên hệ.</p></div>
+        <form method="post" autocomplete="on">
+            {% csrf_token %}<input type="hidden" name="action" value="change_password">
+            <div class="patient-form-grid">
+                <div class="patient-field"><label for="current-password">Mật khẩu hiện tại</label><input id="current-password" name="current_password" type="password" autocomplete="current-password" required></div>
+                <div class="patient-field"><label for="new-password">Mật khẩu mới</label><input id="new-password" name="new_password" type="password" autocomplete="new-password" required></div>
+                <div class="patient-field"><label for="confirm-password">Xác nhận mật khẩu mới</label><input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" required></div>
+            </div>
+            <p class="patient-help" style="margin-top:12px">Mật khẩu mới phải đáp ứng quy tắc bảo mật đang áp dụng cho tài khoản.</p>
+            <div class="patient-actions"><button class="patient-button secondary" type="submit">Đổi mật khẩu</button></div>
+        </form>
+    </section>
+{% endblock %}

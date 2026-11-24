@@ -1,0 +1,32 @@
+{% load static %}
+<footer class="ev-footer">
+    <div class="ev-footer-inner">
+        <div class="ev-footer-brand">
+            <a class="ev-brand ev-brand-light" href="{% url 'home' %}">
+                <img class="ev-brand-logo" src="{% static 'core/img/EyeViora/logoEyeViora.png' %}" alt="Logo EyeViora" width="46" height="46">
+                <span class="ev-brand-copy"><strong>EyeViora</strong><small>MODERN EYE CARE</small></span>
+            </a>
+            <p>Chăm sóc mắt thuận tiện hơn, từ lựa chọn chi nhánh đến theo dõi lịch khám.</p>
+            <p class="ev-footer-note">Thanh toán được thực hiện sau khi khám hoàn tất.</p>
+        </div>
+        <div class="ev-footer-column">
+            <h2>Khám phá</h2>
+            <a href="{% url 'service_catalog_public' %}">Dịch vụ &amp; bảng giá</a>
+            <a href="{% url 'home' %}#chi-nhanh">Tìm chi nhánh</a>
+            <a href="{% url 'gioi_thieu' %}">Về EyeViora</a>
+        </div>
+        <div class="ev-footer-column">
+            <h2>Hỗ trợ</h2>
+            <a href="{% url 'dat_lich_picker' %}">Đặt lịch khám</a>
+            <a href="{% url 'contact_feedback' %}">Liên hệ &amp; góp ý</a>
+            {% if user.is_authenticated %}<a href="{% url 'upcoming_appointments' %}">Lịch khám của tôi</a>{% else %}<a href="{% url 'login' %}">Đăng nhập</a>{% endif %}
+        </div>
+        <div class="ev-footer-column ev-footer-branch">
+            <h2>Chi nhánh</h2>
+            <p>Thông tin địa chỉ và liên hệ được hiển thị trên trang từng chi nhánh.</p>
+            <a href="{% url 'home' %}#chi-nhanh">Xem danh sách chi nhánh <span aria-hidden="true">↗</span></a>
+        </div>
+    </div>
+    <div class="ev-footer-bottom"><span>EyeViora · Modern Eye Care</span><a href="{% url 'home' %}">Về đầu trang ↑</a></div>
+</footer>
+<script src="{% static 'core/js/validation_vi.js' %}" defer></script>

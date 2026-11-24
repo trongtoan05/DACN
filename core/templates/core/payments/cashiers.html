@@ -1,0 +1,8 @@
+{% extends 'core/operations/admin_base.html' %}
+{% load pagination %}
+{% block title %}Tài khoản quản lý chi nhánh{% endblock %}
+{% block page_heading %}Tài khoản quản lý chi nhánh{% endblock %}
+{% block content %}
+<header class="admin-page-head"><div><h1>Tài khoản quản lý chi nhánh</h1><p>Mỗi tài khoản được phân công tại một chi nhánh.</p></div><div class="admin-actions"><a class="btn primary" href="{% url 'cashier_create' %}">Tạo tài khoản quản lý</a><a class="btn" href="{% url 'cashier_monitor' %}">Theo dõi hóa đơn</a></div></header>
+<section class="admin-card"><p class="list-summary">{{ page_obj.paginator.count }} tài khoản phân công</p><div class="table-wrap"><table><thead><tr><th>Tài khoản</th><th>Chi nhánh được gán</th><th>Trạng thái tài khoản</th><th>Trạng thái chi nhánh</th><th>Thao tác</th></tr></thead><tbody>{% for manager in page_obj %}<tr><td><strong>{{ manager.user.username }}</strong><br><span class="muted">{{ manager.user.get_full_name|default:'—' }}</span></td><td>{{ manager.chi_nhanh.ten }} <span class="muted">#{{ manager.chi_nhanh_id }}</span></td><td><span class="status-badge" data-tone="{% if manager.user.is_active %}paid{% else %}neutral{% endif %}">{{ manager.user.is_active|yesno:'Hoạt động,Vô hiệu hóa' }}</span></td><td><span class="status-badge" data-tone="{% if manager.chi_nhanh.dang_hoat_dong %}paid{% else %}neutral{% endif %}">{% if manager.chi_nhanh.dang_hoat_dong %}Đang hoạt động{% else %}Ngừng hoạt động · lịch sử{% endif %}</span></td><td><a class="btn" href="{% url 'cashier_edit' manager.pk %}">Xem / sửa</a></td></tr>{% empty %}<tr><td colspan="5"><div class="empty-state">Chưa có tài khoản quản lý chi nhánh.</div></td></tr>{% endfor %}</tbody></table></div>{% pagination page_obj %}</section>
+{% endblock %}
